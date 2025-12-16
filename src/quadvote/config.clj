@@ -6,6 +6,8 @@
   (config/read
     "config.edn"
     [:map
-     [:http-port integer?]
-     [:omni-secret string?]
-     [:environment [:enum :prod :dev]]]))
+     [:http-port :int]
+     [:omni-secret :string]
+     [:environment [:enum :prod :dev]]
+     [:db-file-path :string]]))
+

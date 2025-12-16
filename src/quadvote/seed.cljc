@@ -1,7 +1,7 @@
 (ns quadvote.seed
   (:require
     [bloom.commons.uuid :as uuid]
-    [quadvote.state :as state]))
+    [quadvote.model :as model]))
 
 (defn generate-user []
   {:user/id (uuid/random)
@@ -21,7 +21,7 @@
                        {:vote/id (uuid/random)
                         :vote/user-id (:user/id user)
                         :vote/topic-id (:topic/id topic)
-                        :vote/voice-amount (inc (rand-int state/max-voice-amount-per-vote))}))
+                        :vote/voice-amount (inc (rand-int model/max-voice-amount-per-vote))}))
                    (remove nil?))]
     {:db/topics (zipmap (map :topic/id topics)
                         topics)
@@ -33,6 +33,6 @@
      :db/votes (zipmap (map :vote/id votes)
                        votes)}))
 
-#_(reset! state/state (generate-state))
+#_(reset! quadvote.state/state (generate-state))
 
 #_(:db/users @state/state)

@@ -1,6 +1,9 @@
 (ns quadvote.state
   (:require
-   [quadvote.model :as model]))
+   [quadvote.model :as model]
+   [taoensso.nippy :as nippy]
+   [quadvote.config :as config]
+   [duratom.core :as d]))
 
 ;; topic
 ;;  topic/id
@@ -21,7 +24,12 @@
 ;; :db/users   {:user/id user}
 ;; :db/balances {:user/id balance}
 ;; :db/votes {:vote/id vote}
-(defonce state (atom {}))
+
+(defonce state (d/duratom :local-file
+                          :file-path (:db-file-path config/config)
+                          :init {}
+                          :rw {:read nippy/thaw-from-file
+                               :write nippy/freeze-to-file}))
 
 (defn votes->topic-voice-amounts
   [votes]
