@@ -8,6 +8,7 @@
     [goog.object :as o]
     [re-frame.core :refer [dispatch subscribe reg-sub reg-event-fx reg-fx]]
     [reagent.core :as r]
+    [quadvote.ui.common :as ui]
     [quadvote.state :as state]))
 
 (defn key-by [f coll]
@@ -130,7 +131,7 @@
 
 (reg-sub :state/topic-voice-amount
   (fn [db [_ topic-id]]
-    (get-in db [:client.db/topic-voice-amounts topic-id])))
+    (get-in db [:client.db/topic-voice-amounts topic-id] 0)))
 
 (reg-sub :state/my-balance
   (fn [db _]
@@ -182,6 +183,124 @@
         :modal/claim-tokens
         [claim-tokens-modal-view])]]))
 
+(defn voting-controls-linear-view [vote]
+  [:div.votes {:tw "flex flex-col space-y-3px min-w-3"}
+   (for [i (range 0 (:vote/voice-amount vote))]
+     ^{:key i}
+     [:div.bar {:tw "w-3 h-0.75 bg-green-700 rounded"}])])
+
+(defn gem-amount-view [amount ?prefix]
+  [:div {:tw "flex gap-0.5 items-center rounded px-1 justify-end"
+         :style {:background-color "rgba(0,0,0,0.05)"}}
+   [:span {:style {:font-family "monospace"}}
+    (case ?prefix
+      :refund
+      "⤴"
+      :cost
+      [:div {:style {:transform "rotate(90deg)"}} "⤵"]
+      :current
+      "="
+      nil)]
+   [:span amount] [ui/gem-icon]])
+
+(defn topic-view
+  [topic]
+  [:div.topic {:tw "bg-white rounded overflow-hidden flex justify-between items-center shadow"}
+   [:div.text {:tw "p-4"} (:topic/text topic)]
+   (let [vote @(subscribe [:state/vote-for-topic (:topic/id topic)])
+         can-upvote? (and
+                      (< (:vote/voice-amount vote) state/max-voice-amount-per-vote)
+                      (state/can-afford? @(subscribe [:state/my-balance])
+                                         (:vote/voice-amount vote) (inc (:vote/voice-amount vote))))]
+     [:div.meta {:tw ["flex px-2 items-center gap-1 self-stretch"
+                      (if vote
+                        "bg-green-200"
+                        "bg-gray-200")]}
+      [:div.total-voice
+       ;; set a fixed width, so that width is the same in all rows
+       {:tw "w-1.5em text-center"}
+       @(subscribe [:state/topic-voice-amount (:topic/id topic)])]
+
+      [:div.diamond
+       (let [s 50
+             z (/ s (Math/sqrt 2))]
+         [:svg {:view-box (str (- z) " " (- (* 2 z)) " " (* 2 z) " " (* 2 z))
+                :width "40px"
+                :height "40px"}
+          (for [i (reverse (range 0 state/max-voice-amount-per-vote))]
+            ^{:key i}
+            [:rect {:x 0
+                    :y 0
+                    :height (* (/ s state/max-voice-amount-per-vote) (inc i))
+                    :width (* (/ s state/max-voice-amount-per-vote) (inc i))
+                    :stroke (if (:vote/voice-amount vote)
+                              "hsl(141deg 79% 85%)"
+                              "hsl(0deg 0% 90%)")
+                    :stroke-width "3"
+                    :style {:transform "rotate(-135deg)"
+                            :fill (cond
+                                    (nil? (:vote/voice-amount vote))
+                                    "hsl(0deg 0% 90%)"
+                                    ;; faded
+                                    #_"hsla(143deg 0% 0% / 3%)"
+                                    (<= (inc i) (:vote/voice-amount vote))
+                                    "hsl(143deg 63% 30%)"
+                                    :else
+                                    "hsl(141deg 79% 85%)"
+                                    ;; faded:
+                                    #_"hsla(143deg 63% 30% / 10%)")}}])])]
+
+      [:div.voting {:tw "flex flex-col items-center min-w-6"}
+       ;; increase-vote
+       (if can-upvote?
+         [ui/popover
+          {:position :right}
+          [:div
+           (let [cost (- (* (inc (:vote/voice-amount vote))
+                            (inc (:vote/voice-amount vote)))
+                         (* (:vote/voice-amount vote)
+                            (:vote/voice-amount vote)))]
+             [:span {:title (str "Increasing your vote by 1 costs you " cost " gems")}
+              [gem-amount-view cost :cost]])]
+          [:button {:tw "px-1 flex gap-1"
+                    :on-click (fn [_]
+                                (dispatch [:state/vote!
+                                           vote
+                                           (:topic/id topic)
+                                           (:vote/voice-amount vote)
+                                           (inc (:vote/voice-amount vote))]))}
+           [fa/fa-caret-up-solid {:tw "w-4 h-4"}]]]
+         [:div {:tw "px-1 w-4 h-4"}])
+
+       ;; our voice
+       [ui/popover
+        {:position :right}
+        [:div {:title (str "Your " (:vote/voice-amount vote) " votes, cost "
+                           (* (:vote/voice-amount vote) (:vote/voice-amount vote)) " gems")}
+         [gem-amount-view (* (:vote/voice-amount vote) (:vote/voice-amount vote)) :current]]
+        [:div {:tw "w-4 text-center"}
+         (:vote/voice-amount vote)]]
+
+       ;; decrease-vote
+       (if vote
+         [ui/popover
+          {:position :right}
+          (let [refund (- (* (:vote/voice-amount vote)
+                             (:vote/voice-amount vote))
+                          (* (dec (:vote/voice-amount vote))
+                             (dec (:vote/voice-amount vote))))]
+            [:div {:title (str "Reducing your vote by 1 refunds you " refund " gems")}
+             [gem-amount-view refund :refund]])
+          [:button {:tw "px-1 flex gap-1"
+                    :on-click (fn [_]
+                                (dispatch [:state/vote!
+                                           vote
+                                           (:topic/id topic)
+                                           (:vote/voice-amount vote)
+                                           (dec (:vote/voice-amount vote))]))}
+           [fa/fa-caret-down-solid {:tw "w-4 h-4"}]]]
+         [:div {:tw "px-1 w-4 h-4"}])]])])
+
 (defn app-view []
   [:div {:tw "bg-#edeef3"}
    [:div {:tw " p-4 max-w-40rem mx-auto"}
@@ -199,83 +318,9 @@
       [fa/fa-plus-circle-solid {:tw "w-4 h-4"}] "Claim"]
      [:div.my-balance {:tw "flex items-center gap-1"}
       @(subscribe [:state/my-balance])
-      [fa/fa-gem-solid {:tw "w-4 h-4"}]]]
+      [ui/gem-icon]]]
     [:div.topics {:tw "space-y-2"}
      (doall
        (for [topic @(subscribe [:state/ranked-topics])]
          ^{:key (:topic/id topic)}
-         [:div.topic {:tw "bg-white rounded overflow-hidden flex justify-between items-center shadow"}
-          [:div.text {:tw "p-4"} (:topic/text topic)]
-          (let [vote @(subscribe [:state/vote-for-topic (:topic/id topic)])]
-            [:div.meta {:tw ["flex px-2 items-center gap-1"
-                             (if vote
-                               "bg-green-200"
-                               "bg-gray-200")]}
-             [:div.voice {:tw "flex flex-col items-center min-w-6"}
-              (if (and
-                    (< (:vote/voice-amount vote) state/max-voice-amount-per-vote)
-                    (state/can-afford? @(subscribe [:state/my-balance])
-                                       (:vote/voice-amount vote) (inc (:vote/voice-amount vote))))
-                [:button {:tw "px-1"
-                          :on-click (fn [_]
-                                      (dispatch [:state/vote!
-                                                 vote
-                                                 (:topic/id topic)
-                                                 (:vote/voice-amount vote)
-                                                 (inc (:vote/voice-amount vote))]))}
-                 [fa/fa-caret-up-solid {:tw "w-4 h-4"}]]
-                [:div {:tw "px-1 w-4 h-4"}])
-              (or @(subscribe [:state/topic-voice-amount (:topic/id topic)]) 0)
-              (if vote
-                [:button {:tw "px-1"
-                          :on-click (fn [_]
-                                      (dispatch [:state/vote!
-                                                 vote
-                                                 (:topic/id topic)
-                                                 (:vote/voice-amount vote)
-                                                 (dec (:vote/voice-amount vote))]))}
-                 [fa/fa-caret-down-solid {:tw "w-4 h-4"}]]
-                [:div {:tw "px-1 w-4 h-4"}])]
-             (if true
-               [:div.votes
-                  (let [s 50
-                        z (/ s (Math/sqrt 2))]
-                    [:svg {:view-box (str (- z) " " (- (* 2 z)) " " (* 2 z) " " (* 2 z))
-                           :width "40px"
-                           :height "40px"}
-                     (when (:vote/voice-amount vote)
-                       [:text {:x (- z)
-                               :text-anchor "start"
-                               :fill "hsl(143deg 63% 30%)"
-                               :y 0}
-                        (* (:vote/voice-amount vote) (:vote/voice-amount vote))])
-                     (when (:vote/voice-amount vote)
-                       [:text {:x z
-                               :text-anchor "end"
-                               :fill "hsl(143deg 63% 30%)"
-                               :y 0}
-                        (:vote/voice-amount vote)])
-                     (for [i (reverse (range 0 state/max-voice-amount-per-vote))]
-                       ^{:key i}
-                       [:rect {:x 0
-                               :y 0
-                               :height (* (/ s state/max-voice-amount-per-vote) (inc i))
-                               :width (* (/ s state/max-voice-amount-per-vote) (inc i))
-                               :stroke (if (:vote/voice-amount vote)
-                                         "hsl(141deg 79% 85%)"
-                                         "hsl(0deg 0% 90%)")
-                               :stroke-width "3"
-                               :style {:transform "rotate(-135deg)"
-                                       :fill (cond
-                                               (nil? (:vote/voice-amount vote))
-                                               #_"hsla(143deg 0% 0% / 3%)"
-                                               "hsl(0deg 0% 90%)"
-                                               (<= (inc i) (:vote/voice-amount vote))
-                                               "hsl(143deg 63% 30%)"
-                                               :else
-                                               "hsl(141deg 79% 85%)"
-                                               #_"hsla(143deg 63% 30% / 10%)")}}])])]
-               [:div.votes {:tw "flex flex-col space-y-3px min-w-3"}
-                (for [i (range 0 (:vote/voice-amount vote))]
-                  ^{:key i}
-                  [:div.bar {:tw "w-3 h-0.75 bg-green-700 rounded"}])])])]))]]])
+         [topic-view topic]))]]])
