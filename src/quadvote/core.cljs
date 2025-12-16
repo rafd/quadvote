@@ -1,10 +1,10 @@
 (ns ^:figwheel-hooks
   quadvote.core
   (:require
-    [bloom.omni.reagent :as r]
-    [re-frame.core :refer [dispatch-sync]]
-    [reagent.dom :as rdom]
-    [quadvote.ui :refer [app-view]]))
+   [bloom.omni.reagent :as r]
+   [re-frame.core :refer [dispatch-sync]]
+   [quadvote.ui.state] ;; to load reframe events
+   [quadvote.ui :refer [app-view]]))
 
 (enable-console-print!)
 

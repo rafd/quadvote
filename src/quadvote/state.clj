@@ -1,4 +1,6 @@
-(ns quadvote.state)
+(ns quadvote.state
+  (:require
+   [quadvote.model :as model]))
 
 ;; topic
 ;;  topic/id
@@ -15,22 +17,11 @@
 ;;  user/name
 ;;  user/email
 
-(def max-voice-amount-per-vote 5)
-
 ;; :db/topics  {:topic/id topic}
 ;; :db/users   {:user/id user}
 ;; :db/balances {:user/id balance}
 ;; :db/votes {:vote/id vote}
 (defonce state (atom {}))
-
-(defn token-cost
-  [previous-voice-amount new-voice-amount]
-  (- (* new-voice-amount new-voice-amount)
-     (* previous-voice-amount previous-voice-amount)))
-
-(defn can-afford?
-  [balance previous-voice-amount new-voice-amount]
-  (<= 0 (- balance (token-cost previous-voice-amount new-voice-amount))))
 
 (defn votes->topic-voice-amounts
   [votes]
@@ -45,9 +36,9 @@
   (let [vote (get-in @state [:db/votes vote-id])
         topic (get-in @state [:db/topics topic-id])
         balance (get-in @state [:db/balances user-id])]
-    (can-afford? balance
-                 (or (:vote/voice-amount vote) 0)
-                 voice-amount)))
+    (model/can-afford? balance
+                       (or (:vote/voice-amount vote) 0)
+                       voice-amount)))
 
 (defn user-has-no-other-vote-for-topic?
   [user-id vote-id topic-id]

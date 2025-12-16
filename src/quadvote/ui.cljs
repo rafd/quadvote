@@ -1,145 +1,10 @@
 (ns quadvote.ui
   (:require
-    [bloom.commons.uuid :as uuid]
     [bloom.commons.fontawesome :as fa]
-    [bloom.commons.tada.rpc.client :as tada.rpc]
-    [bloom.commons.ajax :as ajax]
-    [bloom.omni.fx.dispatch-debounce :as debounce]
     [goog.object :as o]
-    [re-frame.core :refer [dispatch subscribe reg-sub reg-event-fx reg-fx]]
-    [reagent.core :as r]
+    [re-frame.core :refer [dispatch subscribe]]
     [quadvote.ui.common :as ui]
-    [quadvote.state :as state]))
-
-(defn key-by [f coll]
-  (zipmap (map f coll)
-          coll))
-
-(reg-fx :tada (tada.rpc/make-dispatch {:base-path "/api/tada"}))
-
-(reg-fx :ajax ajax/request)
-
-(reg-fx :dispatch-debounce debounce/fx)
-
-(reg-event-fx :state/initialize!
-  (fn [{db :db} _]
-    {:db {:client.db/topics {}
-          :client.db/topic-voice-amounts {}
-          :client.db/me nil
-          :client.db/my-balance nil
-          :client.db/my-votes {}
-          :client.db/modal nil}
-     :dispatch [::check-auth!]}))
-
-(reg-event-fx ::check-auth!
-  (fn [{db :db} _]
-    {:ajax {:uri "/api/auth"
-            :method :get
-            :on-success (fn [_]
-                          (dispatch [::fetch-data!]))
-            :on-error (fn [])}}))
-
-(reg-event-fx ::fetch-data!
-  (fn [{db :db} _]
-    {:tada [:api/data
-            {}
-            {:on-success
-             (fn [data]
-               (dispatch [::store-data! data]))}]}))
-
-(reg-event-fx ::resort!
-  (fn [{db :db} _]
-    {:db (assoc db :client.db/sorted-topic-ids
-           (->> db
-                :client.db/topics
-                vals
-                (sort-by (fn [topic]
-                           (get-in db [:client.db/topic-voice-amounts (:topic/id topic)])))
-                (map :topic/id)
-                reverse))}))
-
-(reg-event-fx ::store-data!
-  (fn [{db :db} [_ data]]
-    {:db {:client.db/topics (key-by :topic/id (:api.data/topics data))
-          :client.db/topic-voice-amounts (:api.data/topic-voice-amounts data)
-          :client.db/sorted-topic-ids
-          (->> (:api.data/topics data)
-               (sort-by (fn [topic]
-                          (get-in data [:api.data/topic-voice-amounts (:topic/id topic)])))
-               (map :topic/id)
-               reverse)
-          :client.db/me (:api.data/user data)
-          :client.db/my-balance (:api.data/balance data)
-          :client.db/my-votes (key-by :vote/topic-id (:api.data/votes data))}}))
-
-(reg-event-fx :state/vote!
-  (fn [{db :db} [_ vote topic-id previous-voice-amount new-voice-amount]]
-    (let [vote (if vote
-                (assoc vote :vote/voice-amount new-voice-amount)
-                {:vote/id (uuid/random)
-                 :vote/voice-amount new-voice-amount
-                 :vote/user-id nil ;; TODO
-                 :vote/topic-id topic-id})]
-      {:db (-> (if (= 0 new-voice-amount)
-                 (update db :client.db/my-votes dissoc topic-id)
-                 (assoc-in db [:client.db/my-votes topic-id] vote))
-               (update-in [:client.db/topic-voice-amounts topic-id]
-                          + (- new-voice-amount
-                               previous-voice-amount))
-               (update :client.db/my-balance
-                       - (state/token-cost previous-voice-amount new-voice-amount)))
-       :dispatch-debounce [{:id ::resort
-                            :dispatch [::resort!]
-                            :timeout 750}]
-       :tada [:api/vote!
-              {:vote-id (:vote/id vote)
-               :topic-id topic-id
-               :voice-amount new-voice-amount}
-              {:on-success (fn [_]
-                             #_(dispatch [::fetch-data!]))}]})))
-
-(reg-event-fx :state/open-modal!
-  (fn [{db :db} [_ modal-id]]
-    {:db (assoc db :client.db/modal modal-id)}))
-
-(reg-event-fx :state/create-topic!
-  (fn [{db :db} [_ text]]
-    {:tada [:api/create-topic!
-            {:id (uuid/random)
-             :text text}
-            {:on-success
-             (fn [_]
-               (dispatch [::fetch-data!]))}]}))
-
-(reg-sub :state/modal
-  (fn [db _]
-    (:client.db/modal db)))
-
-(reg-sub :state/ranked-topics
-  (fn [db _]
-    (->> (:client.db/sorted-topic-ids db)
-         (map (fn [topic-id]
-                (get-in db [:client.db/topics topic-id]))))
-    #_(->> (:client.db/topics db)
-         vals
-         (sort-by (fn [topic]
-                    (get-in db [:client])
-                    ))
-         #_(sort-by (fn [topic]
-                    (get-in db [:client.db/topic-voice-amounts (:topic/id topic)])))
-         reverse)))
-
-(reg-sub :state/topic-voice-amount
-  (fn [db [_ topic-id]]
-    (get-in db [:client.db/topic-voice-amounts topic-id] 0)))
-
-(reg-sub :state/my-balance
-  (fn [db _]
-    (:client.db/my-balance db)))
-
-(reg-sub :state/vote-for-topic
-  (fn [db [_ topic-id]]
-    (get-in db [:client.db/my-votes topic-id])))
+    [quadvote.model :as model]))
 
 (def tw-button
   "flex gap-1 items-center border border-gray-300 p-1 rounded")
@@ -209,8 +74,8 @@
    [:div.text {:tw "p-4"} (:topic/text topic)]
    (let [vote @(subscribe [:state/vote-for-topic (:topic/id topic)])
          can-upvote? (and
-                      (< (:vote/voice-amount vote) state/max-voice-amount-per-vote)
-                      (state/can-afford? @(subscribe [:state/my-balance])
+                      (< (:vote/voice-amount vote) model/max-voice-amount-per-vote)
+                      (model/can-afford? @(subscribe [:state/my-balance])
                                          (:vote/voice-amount vote) (inc (:vote/voice-amount vote))))]
      [:div.meta {:tw ["flex px-2 items-center gap-1 self-stretch"
                       (if vote
@@ -227,12 +92,12 @@
          [:svg {:view-box (str (- z) " " (- (* 2 z)) " " (* 2 z) " " (* 2 z))
                 :width "40px"
                 :height "40px"}
-          (for [i (reverse (range 0 state/max-voice-amount-per-vote))]
+          (for [i (reverse (range 0 model/max-voice-amount-per-vote))]
             ^{:key i}
             [:rect {:x 0
                     :y 0
-                    :height (* (/ s state/max-voice-amount-per-vote) (inc i))
-                    :width (* (/ s state/max-voice-amount-per-vote) (inc i))
+                    :height (* (/ s model/max-voice-amount-per-vote) (inc i))
+                    :width (* (/ s model/max-voice-amount-per-vote) (inc i))
                     :stroke (if (:vote/voice-amount vote)
                               "hsl(141deg 79% 85%)"
                               "hsl(0deg 0% 90%)")
