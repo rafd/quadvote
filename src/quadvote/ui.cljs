@@ -165,7 +165,7 @@
          [:div {:tw "px-1 w-4 h-4"}])]])])
 
 (defn app-view []
-  [:div {:tw "bg-#edeef3"}
+  [:div {:tw "bg-#edeef3 min-h-screen"}
    [:div {:tw " p-4 max-w-40rem mx-auto"}
     [modal-view]
     [:div.header {:tw "flex justify-between items-center pb-4 gap-3"}
