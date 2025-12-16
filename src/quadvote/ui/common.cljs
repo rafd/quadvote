@@ -2,7 +2,7 @@
   (:require
    [reagent.core :as r]))
 
-(defn gem-icon []
+(defn token-icon []
   [:span "⧫"])
 
 (defn popover

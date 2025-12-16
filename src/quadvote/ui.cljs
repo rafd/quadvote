@@ -54,7 +54,7 @@
      ^{:key i}
      [:div.bar {:tw "w-3 h-0.75 bg-green-700 rounded"}])])
 
-(defn gem-amount-view [amount ?prefix]
+(defn token-amount-view [amount ?prefix]
   [:div {:tw "flex gap-0.5 items-center rounded px-1 justify-end"
          :style {:background-color "rgba(0,0,0,0.05)"}}
    [:span {:style {:font-family "monospace"}}
@@ -66,7 +66,7 @@
       :current
       "="
       nil)]
-   [:span amount] [ui/gem-icon]])
+   [:span amount] [ui/token-icon]])
 
 (defn topic-view
   [topic]
@@ -121,12 +121,11 @@
          [ui/popover
           {:position :right}
           [:div
-           (let [cost (- (* (inc (:vote/voice-amount vote))
-                            (inc (:vote/voice-amount vote)))
-                         (* (:vote/voice-amount vote)
-                            (:vote/voice-amount vote)))]
-             [:span {:title (str "Increasing your vote by 1 costs you " cost " gems")}
-              [gem-amount-view cost :cost]])]
+           (let [token-count (model/token-cost
+                              (:vote/voice-amount vote)
+                              (inc (:vote/voice-amount vote)))]
+             [:span {:title (str "Increasing your vote by 1 costs you " token-count " tokens")}
+              [token-amount-view token-count :cost]])]
           [:button {:tw "px-1 flex gap-1"
                     :on-click (fn [_]
                                 (dispatch [:state/vote!
@@ -141,8 +140,8 @@
        [ui/popover
         {:position :right}
         [:div {:title (str "Your " (:vote/voice-amount vote) " votes, cost "
-                           (* (:vote/voice-amount vote) (:vote/voice-amount vote)) " gems")}
-         [gem-amount-view (* (:vote/voice-amount vote) (:vote/voice-amount vote)) :current]]
+                           (* (:vote/voice-amount vote) (:vote/voice-amount vote)) " tokens")}
+         [token-amount-view (* (:vote/voice-amount vote) (:vote/voice-amount vote)) :current]]
         [:div {:tw "w-4 text-center"}
          (:vote/voice-amount vote)]]
 
@@ -150,12 +149,11 @@
        (if vote
          [ui/popover
           {:position :right}
-          (let [refund (- (* (:vote/voice-amount vote)
-                             (:vote/voice-amount vote))
-                          (* (dec (:vote/voice-amount vote))
-                             (dec (:vote/voice-amount vote))))]
-            [:div {:title (str "Reducing your vote by 1 refunds you " refund " gems")}
-             [gem-amount-view refund :refund]])
+          (let [token-count (model/token-cost
+                             (:vote/voice-amount vote)
+                             (dec (:vote/voice-amount vote)))]
+            [:div {:title (str "Reducing your vote by 1 refunds you " token-count " tokens")}
+             [token-amount-view token-count :refund]])
           [:button {:tw "px-1 flex gap-1"
                     :on-click (fn [_]
                                 (dispatch [:state/vote!
@@ -183,7 +181,7 @@
       [fa/fa-plus-circle-solid {:tw "w-4 h-4"}] "Claim"]
      [:div.my-balance {:tw "flex items-center gap-1"}
       @(subscribe [:state/my-balance])
-      [ui/gem-icon]]]
+      [ui/token-icon]]]
     [:div.topics {:tw "space-y-2"}
      (doall
        (for [topic @(subscribe [:state/ranked-topics])]
