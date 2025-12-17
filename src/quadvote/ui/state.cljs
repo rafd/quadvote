@@ -11,6 +11,16 @@
   (zipmap (map f coll)
           coll))
 
+(defn ajax! [params]
+  (js/Promise.
+   (fn [resolve reject]
+     (ajax/request
+      (assoc params
+             :on-success (fn [data]
+                           (resolve data))
+             :on-error (fn [error]
+                         (reject error)))))))
+
 (reg-fx :tada (tada.rpc/make-dispatch {:base-path "/api/tada"}))
 
 (reg-fx :ajax ajax/request)
@@ -31,8 +41,9 @@
   (fn [_ _]
     {:ajax {:uri "/api/auth"
             :method :get
-            :on-success (fn [_]
-                          (dispatch [::fetch-data!]))
+            :on-success (fn [{:keys [authed?]}]
+                          (when authed?
+                            (dispatch [::fetch-data!])))
             :on-error (fn [])}}))
 
 (reg-event-fx ::fetch-data!
@@ -42,6 +53,20 @@
             {:on-success
              (fn [data]
                (dispatch [::store-data! data]))}]}))
+
+(reg-event-fx ::store-data!
+  (fn [_ [_ data]]
+    {:db {:client.db/topics (key-by :topic/id (:api.data/topics data))
+          :client.db/topic-voice-amounts (:api.data/topic-voice-amounts data)
+          :client.db/sorted-topic-ids
+          (->> (:api.data/topics data)
+               (sort-by (fn [topic]
+                          (get-in data [:api.data/topic-voice-amounts (:topic/id topic)])))
+               (map :topic/id)
+               reverse)
+          :client.db/me (:api.data/user data)
+          :client.db/my-balance (:api.data/balance data)
+          :client.db/my-votes (key-by :vote/topic-id (:api.data/votes data))}}))
 
 (reg-event-fx ::resort!
   (fn [{db :db} _]
@@ -54,19 +79,14 @@
                 (map :topic/id)
                 reverse))}))
 
-(reg-event-fx ::store-data!
-  (fn [{db :db} [_ data]]
-    {:db {:client.db/topics (key-by :topic/id (:api.data/topics data))
-          :client.db/topic-voice-amounts (:api.data/topic-voice-amounts data)
-          :client.db/sorted-topic-ids
-          (->> (:api.data/topics data)
-               (sort-by (fn [topic]
-                          (get-in data [:api.data/topic-voice-amounts (:topic/id topic)])))
-               (map :topic/id)
-               reverse)
-          :client.db/me (:api.data/user data)
-          :client.db/my-balance (:api.data/balance data)
-          :client.db/my-votes (key-by :vote/topic-id (:api.data/votes data))}}))
+(reg-event-fx
+ :state/logout!
+ (fn [_ _]
+    {:ajax {:uri "/api/auth"
+            :method :delete
+            :on-success (fn [_]
+                          (js/window.location.reload))
+            :on-error (fn [])}}))
 
 (reg-event-fx :state/vote!
   (fn [{db :db} [_ vote topic-id previous-voice-amount new-voice-amount]]
@@ -106,6 +126,13 @@
             {:on-success
              (fn [_]
                (dispatch [::fetch-data!]))}]}))
+
+;; -------
+
+(reg-sub
+ :state/user
+ (fn [db]
+   (:client.db/me db)))
 
 (reg-sub :state/modal
   (fn [db _]

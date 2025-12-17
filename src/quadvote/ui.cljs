@@ -2,12 +2,11 @@
   (:require
     [bloom.commons.fontawesome :as fa]
     [goog.object :as o]
+    [reagent.core :as r]
     [re-frame.core :refer [dispatch subscribe]]
     [quadvote.ui.common :as ui]
-    [quadvote.model :as model]))
-
-(def tw-button
-  "flex gap-1 items-center border border-gray-300 p-1 rounded")
+    [quadvote.model :as model]
+    [quadvote.ui.state :as state]))
 
 (defn new-topic-modal-view []
   [:form {:on-submit (fn [e]
@@ -164,26 +163,67 @@
            [fa/fa-caret-down-solid {:tw "w-4 h-4"}]]]
          [:div {:tw "px-1 w-4 h-4"}])]])])
 
+(defn header-view []
+  [:div.header {:tw "flex justify-between items-center pb-4 gap-3"}
+   [:h1 {:tw "grow"} "quadvote"]
+   #_[ui/button {:on-click (fn [] (dispatch [:state/open-modal! :modal/new-topic]))}
+      [fa/fa-plus-circle-solid {:tw "w-4 h-4"}]
+      "Suggest a Topic"]
+   [ui/button {:on-click (fn [] (dispatch [:state/open-modal! :modal/info]))}
+    [fa/fa-question-circle-solid {:tw "w-4 h-4"}] "WTF?"]
+   [ui/button {:on-click (fn [] (dispatch [:state/open-modal! :modal/claim-tokens]))}
+    [fa/fa-plus-circle-solid {:tw "w-4 h-4"}] "Claim"]
+   [:div.my-balance {:tw "flex items-center gap-1"}
+    @(subscribe [:state/my-balance])
+    [ui/token-icon]]
+   [ui/button {:on-click (fn [] (dispatch [:state/logout!]))}
+    [fa/fa-sign-out-alt-solid {:tw "w-4 h-4"}]]])
+
+(defn main-view []
+  [:div {:tw "p-4 max-w-40rem mx-auto"}
+   [modal-view]
+   [header-view]
+   [:div.topics {:tw "space-y-2"}
+    (doall
+     (for [topic @(subscribe [:state/ranked-topics])]
+       ^{:key (:topic/id topic)}
+       [topic-view topic]))]])
+
+(defn auth-view []
+  (r/with-let
+   [state (r/atom ::initial)]
+   [:div {:tw "flex flex-col items-center justify-center min-h-screen gap-4"}
+    (case @state
+      ::initial
+      [:form {:on-submit (fn [e]
+                           (.preventDefault e)
+                           (reset! state ::loading)
+                           (-> (state/ajax!
+                                {:uri "/api/auth"
+                                 :method :post
+                                 :params {:email (-> e .-target .-elements (o/get "email") .-value)}})
+                               (.then (fn []
+                                        (reset! state ::complete)))
+                               (.catch (fn []
+                                         (reset! state ::error)))))}
+       [:input {:type "email"
+                :name "email"
+                :tw "p-2 border border-gray-300 rounded w-64"
+                :placeholder "you@example.com"}]
+       [ui/button {:title "Request Login Link"}
+        [fa/fa-sign-in-alt-solid {:tw "w-4 h-4"}]]]
+      ::loading
+      "..."
+      ::complete
+      "Login link sent. Check your email."
+      ::error
+      [:div
+       "Something went wrong."
+       [ui/button {:on-click (fn [] (reset! state ::initial))}
+        "Try again"]])]))
+
 (defn app-view []
   [:div {:tw "bg-#edeef3 min-h-screen"}
-   [:div {:tw " p-4 max-w-40rem mx-auto"}
-    [modal-view]
-    [:div.header {:tw "flex justify-between items-center pb-4 gap-3"}
-     [:h1 {:tw "grow"} "Next Discussions"]
-     [:button {:tw tw-button
-               :on-click (fn [] (dispatch [:state/open-modal! :modal/new-topic]))}
-      [fa/fa-plus-circle-solid {:tw "w-4 h-4"}] "Suggest a Topic"]
-     [:button {:tw tw-button
-               :on-click (fn [] (dispatch [:state/open-modal! :modal/info]))}
-      [fa/fa-question-circle-solid {:tw "w-4 h-4"}] "WTF?"]
-     [:button {:tw tw-button
-               :on-click (fn [] (dispatch [:state/open-modal! :modal/claim-tokens]))}
-      [fa/fa-plus-circle-solid {:tw "w-4 h-4"}] "Claim"]
-     [:div.my-balance {:tw "flex items-center gap-1"}
-      @(subscribe [:state/my-balance])
-      [ui/token-icon]]]
-    [:div.topics {:tw "space-y-2"}
-     (doall
-       (for [topic @(subscribe [:state/ranked-topics])]
-         ^{:key (:topic/id topic)}
-         [topic-view topic]))]]])
+   (if @(subscribe [:state/user])
+     [main-view]
+     [auth-view])])

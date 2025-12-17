@@ -64,6 +64,17 @@
   [user-id]
   (boolean (get-in @state [:db/users user-id])))
 
+(defn user-by-email
+  [email]
+  (->> (:db/users @state)
+       (some (fn [[_ user]]
+               (when (= email (:user/email user))
+                 user)))))
+
+(defn user-is-admin?
+  [user-id]
+  (get-in @state [:db/users user-id :user/admin?]))
+
 (defn topic-with-id-exists?
   [topic-id]
   (boolean (get-in @state [:db/topics topic-id])))

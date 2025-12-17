@@ -36,3 +36,10 @@
                            {}))))
              :tw "bg-white shadow"}
        popover-content])]))
+
+(defn button
+  [opts & children]
+  (into [:button (merge
+                  {:tw "flex gap-1 items-center border border-gray-300 p-1 rounded"}
+                  opts)]
+        children))
