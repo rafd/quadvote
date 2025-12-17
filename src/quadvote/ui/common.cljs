@@ -2,8 +2,23 @@
   (:require
    [reagent.core :as r]))
 
+(def purple "#7c3aed")
+
 (defn token-icon []
   [:span "⧫"])
+
+(defn token-amount-view [amount ?prefix]
+  [:div {:tw "flex gap-0.5 items-center rounded px-1 justify-end"
+         :style {:background-color "rgba(124, 58, 237, 0.1)"
+                 :border (str "1px solid " purple)
+                 :color purple}}
+   [:span {:style {:font-family "monospace"}}
+    (case ?prefix
+      :refund "⤴"
+      :cost [:div {:style {:transform "rotate(90deg)"}} "⤵"]
+      :current "="
+      nil)]
+   [:span (Math/abs amount)] [token-icon]])
 
 (defn popover
   [{:keys [position]} popover-content popover-trigger]

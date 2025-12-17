@@ -53,20 +53,6 @@
      ^{:key i}
      [:div.bar {:tw "w-3 h-0.75 bg-green-700 rounded"}])])
 
-(defn token-amount-view [amount ?prefix]
-  [:div {:tw "flex gap-0.5 items-center rounded px-1 justify-end"
-         :style {:background-color "rgba(0,0,0,0.05)"}}
-   [:span {:style {:font-family "monospace"}}
-    (case ?prefix
-      :refund
-      "⤴"
-      :cost
-      [:div {:style {:transform "rotate(90deg)"}} "⤵"]
-      :current
-      "="
-      nil)]
-   [:span amount] [ui/token-icon]])
-
 (defn topic-view
   [topic]
   [:div.topic {:tw "bg-white rounded overflow-hidden flex justify-between items-center shadow"}
@@ -124,7 +110,7 @@
                               (:vote/voice-amount vote)
                               (inc (:vote/voice-amount vote)))]
              [:span {:title (str "Increasing your vote by 1 costs you " token-count " tokens")}
-              [token-amount-view token-count :cost]])]
+              [ui/token-amount-view token-count :cost]])]
           [:button {:tw "px-1 flex gap-1"
                     :on-click (fn [_]
                                 (dispatch [:state/vote!
@@ -140,7 +126,7 @@
         {:position :right}
         [:div {:title (str "Your " (:vote/voice-amount vote) " votes, cost "
                            (* (:vote/voice-amount vote) (:vote/voice-amount vote)) " tokens")}
-         [token-amount-view (* (:vote/voice-amount vote) (:vote/voice-amount vote)) :current]]
+         [ui/token-amount-view (* (:vote/voice-amount vote) (:vote/voice-amount vote)) :current]]
         [:div {:tw "w-4 text-center"}
          (:vote/voice-amount vote)]]
 
@@ -152,7 +138,7 @@
                              (:vote/voice-amount vote)
                              (dec (:vote/voice-amount vote)))]
             [:div {:title (str "Reducing your vote by 1 refunds you " token-count " tokens")}
-             [token-amount-view token-count :refund]])
+             [ui/token-amount-view token-count :refund]])
           [:button {:tw "px-1 flex gap-1"
                     :on-click (fn [_]
                                 (dispatch [:state/vote!
@@ -174,8 +160,7 @@
    [ui/button {:on-click (fn [] (dispatch [:state/open-modal! :modal/claim-tokens]))}
     [fa/fa-plus-circle-solid {:tw "w-4 h-4"}] "Claim"]
    [:div.my-balance {:tw "flex items-center gap-1"}
-    @(subscribe [:state/my-balance])
-    [ui/token-icon]]
+    [ui/token-amount-view @(subscribe [:state/my-balance]) nil]]
    [ui/button {:on-click (fn [] (dispatch [:state/logout!]))}
     [fa/fa-sign-out-alt-solid {:tw "w-4 h-4"}]]])
 
