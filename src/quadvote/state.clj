@@ -26,7 +26,7 @@
 ;; :db/votes {:vote/id vote}
 
 (defonce state (d/duratom :local-file
-                          :file-path (:db-file-path config/config)
+                          :file-path (config/get :db-file-path)
                           :init {}
                           :rw {:read nippy/thaw-from-file
                                :write nippy/freeze-to-file}))

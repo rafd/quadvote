@@ -3,19 +3,20 @@
    [bloom.omni.core :as omni]
    [quadvote.cqrs] ;; to register tada events
    [quadvote.routes :as routes]
-   [quadvote.config :refer [config]]))
+   [quadvote.config :as config]))
 
 (defn start! []
   (omni/start!
     omni/system
-    {:omni/http-port (:http-port config)
+    {:omni/http-port (config/get :http-port)
      :omni/title "quadvote"
      :omni/environment :dev
      :omni/api-routes #'routes/routes
      :omni/cljs {:main "quadvote.core"}
      :omni/auth {:cookie {:name "quadvote"
-                          :secret (:omni-secret config)
-                          :same-site :strict}}
+                          :secret (config/get :omni-secret)
+                          :same-site :strict}
+                 :token {:secret (config/get :omni-secret)}}
      :omni/css
      {:tailwind? true
       :tailwind-opts {:base-css-rules '[girouette.tw.preflight/preflight-v2_0_3]}}}))
