@@ -1,5 +1,6 @@
 (ns quadvote.state
   (:require
+   [bloom.commons.uuid :as uuid]
    [quadvote.model :as model]
    [taoensso.nippy :as nippy]
    [quadvote.config :as config]
@@ -25,9 +26,15 @@
 ;; :db/balances {:user/id balance}
 ;; :db/votes {:vote/id vote}
 
+(def initial-state
+  {:db/topics {}
+   :db/users {}
+   :db/balances {}
+   :db/votes {}})
+
 (defonce state (d/duratom :local-file
                           :file-path (config/get :db-file-path)
-                          :init {}
+                          :init initial-state
                           :rw {:read nippy/thaw-from-file
                                :write nippy/freeze-to-file}))
 
@@ -81,11 +88,21 @@
 
 ;; actions
 
+(defn create-user!
+  [{:keys [name email admin?]}]
+  (let [id (uuid/random)]
+    (swap! state assoc-in [:db/users id]
+           {:user/id id
+            :user/name name
+            :user/email email
+            :user/admin? admin?})))
+
 (defn create-topic!
-  [id text]
-  (swap! state assoc-in [:db/topics id]
-         {:topic/id id
-          :topic/text text}))
+  [text]
+  (let [id (uuid/random)]
+    (swap! state assoc-in [:db/topics id]
+           {:topic/id id
+            :topic/text text})))
 
 (defn vote!
   [vote-id topic-id user-id voice-amount]

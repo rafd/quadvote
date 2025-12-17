@@ -17,20 +17,23 @@
                             (filter (fn [vote]
                                       (= user-id (:vote/user-id vote)))))})}])
 
+(defn user-with-id-exists?-condition
+  [user-id]
+  [#(state/user-with-id-exists? user-id)
+   :invalid "User with this id does not exist."])
+
+(defn user-is-admin?-condition
+  [user-id]
+  [#(state/user-is-admin? user-id)
+   :forbidden "User is not an admin."])
+
+(defn topic-with-id-exists?-condition
+  [topic-id]
+  [#(state/topic-with-id-exists? topic-id)
+   :invalid "Topic with this id does not exist."])
+
 (def commands
-  [{:id :api/create-topic!
-    :params {:id uuid?
-             :text string?
-             :user-id uuid?}
-    :conditions
-    (fn [{:keys [id text user-id]}]
-      [[#(state/user-with-id-exists? user-id)
-        :invalid "User with this id does not exist."]
-       [#(not (state/topic-with-id-exists? id))
-        :invalid "Topic with this id already exists."]])
-    :effect
-    (fn [{:keys [id text user-id]}]
-      (state/create-topic! id text))}
+  [
 
    {:id :api/vote!
     :params {:vote-id uuid?
@@ -42,10 +45,8 @@
              :user-id uuid?}
     :conditions
     (fn [{:keys [vote-id topic-id voice-amount user-id]}]
-      [[#(state/user-with-id-exists? user-id)
-        :invalid "User with this id does not exist."]
-       [#(state/topic-with-id-exists? topic-id)
-        :invalid "Topic with this id does not exist."]
+      [(user-with-id-exists?-condition user-id)
+       (topic-with-id-exists?-condition topic-id)
        [#(state/user-has-no-other-vote-for-topic? user-id vote-id topic-id)
         :invalid "User has another vote for this topic"]
        [#(state/user-can-afford? {:user-id user-id
@@ -62,8 +63,7 @@
              :user-id uuid?}
     :conditions
     (fn [{:keys [secret user-id]}]
-      [[#(state/user-with-id-exists? user-id)
-        :invalid "User with this id does not exist."]])
+      [(user-with-id-exists?-condition user-id)])
     ;; secret exists
     ;; user hasn't claimed this secret already
     :effect
@@ -72,15 +72,42 @@
 
    ;; admin-only
 
-   #_{:id :api/remove-topic!
-      :conditions
-      (fn [{:keys [user-id]}]
-        [[#(state/user-with-id-exists? user-id)
-          :invalid "User with this id does not exist."]])
-      ;; is admin
-      ;; topic exists
-      }
-   ])
+   {:id :api/create-user!
+    :params {:name string?
+             :email string?
+             :user-id uuid?}
+    :conditions
+    (fn [{:keys [user-id email]}]
+      [(user-with-id-exists?-condition user-id)
+       (user-is-admin?-condition user-id)
+       [#(nil? (state/user-by-email email))
+        :invalid "User with this email already exists."]])
+    :effect
+    (fn [{:keys [name email]}]
+      (state/create-user! {:name name :email email}))}
+
+   {:id :api/create-topic!
+    :params {:text string?
+             :user-id uuid?}
+    :conditions
+    (fn [{:keys [user-id]}]
+      [(user-with-id-exists?-condition user-id)
+       (user-is-admin?-condition user-id)])
+    :effect
+    (fn [{:keys [text]}]
+      (state/create-topic! text))}
+
+   {:id :api/remove-topic!
+    :params {:topic-id uuid?
+             :user-id uuid?}
+    :conditions
+    (fn [{:keys [user-id topic-id]}]
+      [(user-with-id-exists?-condition user-id)
+       (topic-with-id-exists?-condition topic-id)
+       (user-is-admin?-condition user-id)])
+    :effect
+    (fn [{:keys [topic-id]}]
+      #_(state/remove-topic! topic-id))}])
 
 (tada/register! (concat queries commands))
 
