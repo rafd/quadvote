@@ -4,9 +4,11 @@
     [quadvote.model :as model]))
 
 (defn generate-user []
-  {:user/id (uuid/random)
-   :user/name "alice"
-   :user/email "alice@example.com"})
+  (let [uuid (uuid/random)
+        name (apply str (take 5 (re-seq #"[a-z]" (str uuid))))]
+    {:user/id uuid
+     :user/name name
+     :user/email (str name "@example.com")}))
 
 (defn generate-topic []
   {:topic/id (uuid/random)
@@ -14,7 +16,11 @@
 
 (defn generate-state []
   (let [topics (repeatedly 10 generate-topic)
-        users (repeatedly 10 generate-user)
+        users (conj (repeatedly 10 generate-user)
+                    {:user/id (uuid/random)
+                     :user/name "Admin"
+                     :user/admin? true
+                     :user/email "admin@example.com"})
         votes (->> (for [topic topics
                          user users]
                      (when (rand-nth [true false])

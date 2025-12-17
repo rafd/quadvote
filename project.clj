@@ -7,4 +7,5 @@
                  [duratom "0.5.9"]
                  [re-frame "0.10.5"]
                  [tada "0.2.2"]]
-  :main quadvote.core)
+  :main quadvote.core
+  :profiles {:dev {:source-paths ["src" "dev-src"]}})
