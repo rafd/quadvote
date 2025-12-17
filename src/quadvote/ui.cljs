@@ -29,8 +29,6 @@
    [:p "(This is an experiment in applied " [:a {:tw "underline decoration-from-font"
                                                  :href "https://en.wikipedia.org/wiki/Quadratic_voting"} "quadratic voting"] ")"]])
 
-(defn claim-tokens-modal-view [])
-
 (defn modal-view []
   (when-let [modal-id @(subscribe [:state/modal])]
     [:div.wrapper {:tw "absolute top-0 right-0 left-0 bottom-0 flex p-10 cursor-pointer items-center justify-center"
@@ -43,9 +41,7 @@
         :modal/new-topic
         [new-topic-modal-view]
         :modal/info
-        [info-modal-view]
-        :modal/claim-tokens
-        [claim-tokens-modal-view])]]))
+        [info-modal-view])]]))
 
 (defn voting-controls-linear-view [vote]
   [:div.votes {:tw "flex flex-col space-y-3px min-w-3"}
@@ -157,8 +153,6 @@
       "Suggest a Topic"]
    [ui/button {:on-click (fn [] (dispatch [:state/open-modal! :modal/info]))}
     [fa/fa-question-circle-solid {:tw "w-4 h-4"}] "WTF?"]
-   [ui/button {:on-click (fn [] (dispatch [:state/open-modal! :modal/claim-tokens]))}
-    [fa/fa-plus-circle-solid {:tw "w-4 h-4"}] "Claim"]
    [:div.my-balance {:tw "flex items-center gap-1"}
     [ui/token-amount-view @(subscribe [:state/my-balance]) nil]]
    [ui/button {:on-click (fn [] (dispatch [:state/logout!]))}
