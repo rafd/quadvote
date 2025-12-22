@@ -2,6 +2,7 @@
   (:require
    [bloom.omni.auth.token :as token]
    [bloom.commons.tada.rpc.server :as tada.rpc]
+   [quadvote.email :as email]
    [quadvote.state :as state]
    [quadvote.config :as config]))
 
@@ -24,7 +25,17 @@
     (fn [request]
       (if-let [user (state/user-by-email (get-in request [:body-params :email]))]
         (do
-          (println (wrap-login {:url "/" :user-id (:user/id user)}))
+          (future
+            (let [link (wrap-login {:url "/"
+                                    :user-id (:user/id user)})]
+              (email/send!
+               {:to (:user/email user)
+                :subject "QuadVote Login Link"
+                :body [:div
+                       [:p
+                        [:a {:href link} "Click here"] " to log into QuadVote, or follow the link below:"]
+                       [:p
+                        [:a {:href link} link]]]})))
           {:status 200})
         {:status 400}))]
 

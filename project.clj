@@ -4,6 +4,7 @@
                  [io.bloomventures/omni "0.29.1"]
                  [io.bloomventures/commons "0.12.1"]
                  [com.taoensso/nippy "3.6.0"]
+                 [com.draines/postal "2.0.3"]
                  [duratom "0.5.9"]
                  [re-frame "0.10.5"]
                  [tada "0.2.2"]]
