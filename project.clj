@@ -9,4 +9,11 @@
                  [re-frame "0.10.5"]
                  [tada "0.2.2"]]
   :main quadvote.core
-  :profiles {:dev {:source-paths ["src" "dev-src"]}})
+
+  :plugins [[io.bloomventures/omni "0.32.2"]]
+  :omni-config quadvote.omni-config/omni-config
+
+  :profiles {:dev {:source-paths ["src" "dev-src"]}
+             :uberjar {:aot [quadvote.core]
+                       :prep-tasks [["omni" "compile"]
+                                    "compile"]}})
