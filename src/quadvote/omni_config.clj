@@ -6,7 +6,7 @@
 (def omni-config
   {:omni/http-port (config/get :http-port)
    :omni/title "quadvote"
-   :omni/environment :dev
+   :omni/environment (config/get :environment)
    :omni/api-routes #'routes/routes
    :omni/cljs {:main "quadvote.core"}
    :omni/auth {:cookie {:name "quadvote"
