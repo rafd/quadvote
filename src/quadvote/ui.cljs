@@ -159,7 +159,7 @@
     [fa/fa-sign-out-alt-solid {:tw "w-4 h-4"}]]])
 
 (defn main-view []
-  [:div {:tw "p-4 max-w-40rem mx-auto"}
+  [:div {:tw "px-8 p-4 max-w-40rem mx-auto"}
    [modal-view]
    [header-view]
    [:div.topics {:tw "space-y-2"}
@@ -203,6 +203,9 @@
 
 (defn app-view []
   [:div {:tw "bg-#edeef3 min-h-screen"}
+   [:style
+    ;; temporary fix for seizure-inducing scrollbar when popover is active
+    "body { overflow-x: hidden }"]
    (if @(subscribe [:state/user])
      [main-view]
      [auth-view])])
