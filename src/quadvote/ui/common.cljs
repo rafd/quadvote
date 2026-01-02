@@ -9,7 +9,7 @@
 
 (defn token-amount-view [amount ?prefix]
   [:div {:tw "flex gap-0.5 items-center rounded px-1 justify-end"
-         :style {:background-color "rgba(124, 58, 237, 0.1)"
+         :style {:background-color "#e2ddf3"
                  :border (str "1px solid " purple)
                  :color purple}}
    [:span {:style {:font-family "monospace"}}
@@ -48,8 +48,7 @@
                            :left
                            {:top 0
                             :right (str (.-offsetWidth @container-el) "px")}
-                           {}))))
-             :tw "bg-white shadow"}
+                           {}))))}
        popover-content])]))
 
 (defn button
