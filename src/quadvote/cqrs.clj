@@ -87,15 +87,17 @@
       (state/create-user! {:name name :email email}))}
 
    {:id :api/create-topic!
-    :params {:text string?
+    :params {:title string?
+             :description string?
              :user-id uuid?}
     :conditions
     (fn [{:keys [user-id]}]
       [(user-with-id-exists?-condition user-id)
        (user-is-admin?-condition user-id)])
     :effect
-    (fn [{:keys [text]}]
-      (state/create-topic! text))}
+    (fn [{:keys [title description]}]
+      (state/create-topic! {:title title
+                            :description description}))}
 
    {:id :api/remove-topic!
     :params {:topic-id uuid?

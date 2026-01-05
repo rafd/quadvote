@@ -8,7 +8,8 @@
 
 ;; topic
 ;;  topic/id
-;;  topic/text
+;;  topic/title
+;;  topic/description
 
 ;; vote
 ;;   vote/id
@@ -98,11 +99,12 @@
             :user/admin? admin?})))
 
 (defn create-topic!
-  [text]
+  [{:keys [title description]}]
   (let [id (uuid/random)]
     (swap! state assoc-in [:db/topics id]
            {:topic/id id
-            :topic/text text})))
+            :topic/title title
+            :topic/description description})))
 
 (defn vote!
   [vote-id topic-id user-id voice-amount]

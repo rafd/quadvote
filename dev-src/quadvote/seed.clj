@@ -13,7 +13,8 @@
      :email (str name "@example.com")}))
 
 (defn generate-topic []
-  {:text (str "Foo bar baz " (rand-int 10000))})
+  {:title (str "Foo bar baz " (rand-int 10000))
+   :description "Lorep ipsum...\n\n Read more [here](https://example.com)."})
 
 (defn seed! []
   (reset! state/state state/initial-state)

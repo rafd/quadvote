@@ -4,6 +4,7 @@
     [goog.object :as o]
     [reagent.core :as r]
     [re-frame.core :refer [dispatch subscribe]]
+    [markdown.core :as md]
     [quadvote.ui.common :as ui]
     [quadvote.model :as model]
     [quadvote.ui.state :as state]))
@@ -51,112 +52,128 @@
 
 (defn topic-view
   [topic]
-  [:div.topic {:tw "bg-white rounded overflow-hidden flex justify-between items-center shadow"}
-   [:div.text {:tw "p-4"} (:topic/text topic)]
-   (let [vote @(subscribe [:state/vote-for-topic (:topic/id topic)])
-         can-upvote? (and
-                      (< (:vote/voice-amount vote) model/max-voice-amount-per-vote)
-                      (model/can-afford? @(subscribe [:state/my-balance])
-                                         (:vote/voice-amount vote) (inc (:vote/voice-amount vote))))]
-     [:div.meta {:tw ["flex px-2 items-center gap-1 self-stretch"
-                      (if vote
-                        "bg-green-200"
-                        "bg-gray-200")]}
-      [:div.total-voice
-       ;; set a fixed width, so that width is the same in all rows
-       {:tw "w-1.5em text-center"}
-       @(subscribe [:state/topic-voice-amount (:topic/id topic)])]
+  (r/with-let
+   [show-description? (r/atom false)]
+   [:div.topic {:tw "bg-white rounded overflow-hidden shadow"}
+    [:div.main {:tw "flex justify-between items-center"}
+     [:div.title {:tw "p-4 flex gap-2 items-center cursor-pointer group"
+                  :on-click (fn []
+                              (swap! show-description? not))}
+      (:topic/title topic)
+      [fa/fa-info-circle-solid {:tw "w-3 h-3 text-gray-400 group:hover:text-gray-600"}]]
 
-      [:div.diamond
-       (let [s 50
-             z (/ s (Math/sqrt 2))]
-         [:svg {:view-box (str (- z) " " (- (* 2 z)) " " (* 2 z) " " (* 2 z))
-                :width "40px"
-                :height "40px"}
-          (for [i (reverse (range 0 model/max-voice-amount-per-vote))]
-            ^{:key i}
-            [:rect {:x 0
-                    :y 0
-                    :height (* (/ s model/max-voice-amount-per-vote) (inc i))
-                    :width (* (/ s model/max-voice-amount-per-vote) (inc i))
-                    :stroke (if (:vote/voice-amount vote)
-                              "hsl(141deg 79% 85%)"
-                              "hsl(0deg 0% 90%)")
-                    :stroke-width "3"
-                    :style {:transform "rotate(-135deg)"
-                            :fill (cond
-                                    (nil? (:vote/voice-amount vote))
-                                    "hsl(0deg 0% 90%)"
-                                    ;; faded
-                                    #_"hsla(143deg 0% 0% / 3%)"
-                                    (<= (inc i) (:vote/voice-amount vote))
-                                    "hsl(143deg 63% 30%)"
-                                    :else
-                                    "hsl(141deg 79% 85%)"
-                                    ;; faded:
-                                    #_"hsla(143deg 63% 30% / 10%)")}}])])]
+     (let [vote @(subscribe [:state/vote-for-topic (:topic/id topic)])
+           can-upvote? (and
+                        (< (:vote/voice-amount vote) model/max-voice-amount-per-vote)
+                        (model/can-afford? @(subscribe [:state/my-balance])
+                                           (:vote/voice-amount vote) (inc (:vote/voice-amount vote))))]
+       [:div.meta {:tw ["flex px-2 items-center gap-1 self-stretch"
+                        (if vote
+                          "bg-green-200 border-l border-green-300"
+                          "bg-gray-200 border-l border-gray-300")]}
+        [:div.total-voice
+         ;; set a fixed width, so that width is the same in all rows
+         {:tw "w-1.5em text-center"}
+         @(subscribe [:state/topic-voice-amount (:topic/id topic)])]
 
-      [:div.voting {:tw "flex flex-col items-center min-w-6"}
-       ;; increase-vote
-       (if can-upvote?
+        [:div.diamond
+         (let [s 50
+               z (/ s (Math/sqrt 2))]
+           [:svg {:view-box (str (- z) " " (- (* 2 z)) " " (* 2 z) " " (* 2 z))
+                  :width "40px"
+                  :height "40px"}
+            (for [i (reverse (range 0 model/max-voice-amount-per-vote))]
+              ^{:key i}
+              [:rect {:x 0
+                      :y 0
+                      :height (* (/ s model/max-voice-amount-per-vote) (inc i))
+                      :width (* (/ s model/max-voice-amount-per-vote) (inc i))
+                      :stroke (if (:vote/voice-amount vote)
+                                "hsl(141deg 79% 85%)"
+                                "hsl(0deg 0% 90%)")
+                      :stroke-width "3"
+                      :style {:transform "rotate(-135deg)"
+                              :fill (cond
+                                      (nil? (:vote/voice-amount vote))
+                                      "hsl(0deg 0% 90%)"
+                                      ;; faded
+                                      #_"hsla(143deg 0% 0% / 3%)"
+                                      (<= (inc i) (:vote/voice-amount vote))
+                                      "hsl(143deg 63% 30%)"
+                                      :else
+                                      "hsl(141deg 79% 85%)"
+                                      ;; faded:
+                                      #_"hsla(143deg 63% 30% / 10%)")}}])])]
+
+        [:div.voting {:tw "flex flex-col items-center min-w-6"}
+         ;; increase-vote
+         (if can-upvote?
+           [ui/popover
+            {:position :right}
+            [:div
+             (let [token-count (model/token-cost
+                                (:vote/voice-amount vote)
+                                (inc (:vote/voice-amount vote)))]
+               [:span {:title (str "Increasing your vote by 1 costs you " token-count " tokens")}
+                [ui/token-amount-view token-count :cost]])]
+            [:button {:tw "px-1 flex gap-1"
+                      :on-click (fn [_]
+                                  (dispatch [:state/vote!
+                                             vote
+                                             (:topic/id topic)
+                                             (:vote/voice-amount vote)
+                                             (inc (:vote/voice-amount vote))]))}
+             [fa/fa-caret-up-solid {:tw "w-4 h-4"}]]]
+           [:div {:tw "px-1 w-4 h-4"}])
+
+         ;; our voice
          [ui/popover
           {:position :right}
-          [:div
-           (let [token-count (model/token-cost
-                              (:vote/voice-amount vote)
-                              (inc (:vote/voice-amount vote)))]
-             [:span {:title (str "Increasing your vote by 1 costs you " token-count " tokens")}
-              [ui/token-amount-view token-count :cost]])]
-          [:button {:tw "px-1 flex gap-1"
-                    :on-click (fn [_]
-                                (dispatch [:state/vote!
-                                           vote
-                                           (:topic/id topic)
-                                           (:vote/voice-amount vote)
-                                           (inc (:vote/voice-amount vote))]))}
-           [fa/fa-caret-up-solid {:tw "w-4 h-4"}]]]
-         [:div {:tw "px-1 w-4 h-4"}])
+          [:div {:title (str "Your " (:vote/voice-amount vote) " votes, cost "
+                             (* (:vote/voice-amount vote) (:vote/voice-amount vote)) " tokens")}
+           [ui/token-amount-view (* (:vote/voice-amount vote) (:vote/voice-amount vote)) :current]]
+          [:div {:tw "w-4 text-center h-4"}
+           (:vote/voice-amount vote)]]
 
-       ;; our voice
-       [ui/popover
-        {:position :right}
-        [:div {:title (str "Your " (:vote/voice-amount vote) " votes, cost "
-                           (* (:vote/voice-amount vote) (:vote/voice-amount vote)) " tokens")}
-         [ui/token-amount-view (* (:vote/voice-amount vote) (:vote/voice-amount vote)) :current]]
-        [:div {:tw "w-4 text-center"}
-         (:vote/voice-amount vote)]]
-
-       ;; decrease-vote
-       (if vote
-         [ui/popover
-          {:position :right}
-          (let [token-count (model/token-cost
-                             (:vote/voice-amount vote)
-                             (dec (:vote/voice-amount vote)))]
-            [:div {:title (str "Reducing your vote by 1 refunds you " token-count " tokens")}
-             [ui/token-amount-view token-count :refund]])
-          [:button {:tw "px-1 flex gap-1"
-                    :on-click (fn [_]
-                                (dispatch [:state/vote!
-                                           vote
-                                           (:topic/id topic)
-                                           (:vote/voice-amount vote)
-                                           (dec (:vote/voice-amount vote))]))}
-           [fa/fa-caret-down-solid {:tw "w-4 h-4"}]]]
-         [:div {:tw "px-1 w-4 h-4"}])]])])
+         ;; decrease-vote
+         (if vote
+           [ui/popover
+            {:position :right}
+            (let [token-count (model/token-cost
+                               (:vote/voice-amount vote)
+                               (dec (:vote/voice-amount vote)))]
+              [:div {:title (str "Reducing your vote by 1 refunds you " token-count " tokens")}
+               [ui/token-amount-view token-count :refund]])
+            [:button {:tw "px-1 flex gap-1"
+                      :on-click (fn [_]
+                                  (dispatch [:state/vote!
+                                             vote
+                                             (:topic/id topic)
+                                             (:vote/voice-amount vote)
+                                             (dec (:vote/voice-amount vote))]))}
+             [fa/fa-caret-down-solid {:tw "w-4 h-4"}]]]
+           [:div {:tw "px-1 w-4 h-4"}])]])]
+    (when @show-description?
+      [:div.description
+       {:tw "px-4 whitespace-pre prose text-xs border-t border-gray-300"
+        :dangerouslySetInnerHTML
+        {:__html
+         (md/md->html
+          (:topic/description topic))}}])]))
 
 (defn header-view []
   [:div.header {:tw "flex justify-between items-center pb-4 gap-3"}
-   [:h1 {:tw "grow"} "quadvote"]
+   [:h1 {:tw "grow"} "What should Raf work on?"]
    #_[ui/button {:on-click (fn [] (dispatch [:state/open-modal! :modal/new-topic]))}
       [fa/fa-plus-circle-solid {:tw "w-4 h-4"}]
       "Suggest a Topic"]
    [ui/button {:on-click (fn [] (dispatch [:state/open-modal! :modal/info]))}
-    [fa/fa-question-circle-solid {:tw "w-4 h-4"}] "WTF?"]
+    [fa/fa-question-circle-solid {:tw "w-3 h-3"}]
+    [:span {:tw "text-xs"} "WTF?"]]
    [:div.my-balance {:tw "flex items-center gap-1"}
     [ui/token-amount-view @(subscribe [:state/my-balance]) nil]]
    [ui/button {:on-click (fn [] (dispatch [:state/logout!]))}
-    [fa/fa-sign-out-alt-solid {:tw "w-4 h-4"}]]])
+    [fa/fa-sign-out-alt-solid {:tw "w-3 h-3"}]]])
 
 (defn main-view []
   [:div {:tw "px-8 p-4 max-w-40rem mx-auto"}
@@ -205,7 +222,9 @@
   [:div {:tw "bg-#edeef3 min-h-screen"}
    [:style
     ;; temporary fix for seizure-inducing scrollbar when popover is active
-    "body { overflow-x: hidden }"]
+    "body { overflow-x: hidden }
+
+    .group:hover  .group\\:hover\\:text-gray-600 { color: #4b5563; }"]
    (if @(subscribe [:state/user])
      [main-view]
      [auth-view])])
