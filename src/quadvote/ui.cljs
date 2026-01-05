@@ -21,21 +21,32 @@
    [:button "Submit"]])
 
 (defn info-modal-view []
-  [:div
-   [:p "Vote on what topic to discuss at the next meeting."]
-   [:p "You have tokens to spend across topics."]
-   [:p "You can vote multiple times per topic, but concentrating votes is more expensive (1, 4, 9, 16, 25). Max 5 per topic. You can adjust your vote any time."]
-   [:p "When a topic is finalized, tokens spent on votes for that topic are burned."]
-   [:p "Earn new tokens by attending meetings."]
+  [:div {:tw "prose"}
+   [:p "Vote on which projects Raf should spend more time on."]
+   [:p ]
+   [:p "You have tokens to spend across projects."]
+   [:p "You can vote multiple times per project, but concentrating votes is more expensive:"]
+  [:table
+    [:tr [:th "Tokens =>"] [:th "Votes"]]
+    [:tr [:td "1"] [:td "1"]]
+    [:tr [:td "4"] [:td "2"]]
+    [:tr [:td "9"] [:td "3"]]
+    [:tr [:td "16"] [:td "4"]]
+    [:tr [:td "25"] [:td "5"]]]
+   [:p "You can adjust your votes any time."]
+   [:p "When Raf spends a day on a project, tokens spent that project will be consumed."]
+   [:p "New tokens can be claimed by logging in once a month."]
    [:p "(This is an experiment in applied " [:a {:tw "underline decoration-from-font"
+                                                 :target "_blank"
                                                  :href "https://en.wikipedia.org/wiki/Quadratic_voting"} "quadratic voting"] ")"]])
 
 (defn modal-view []
   (when-let [modal-id @(subscribe [:state/modal])]
     [:div.wrapper {:tw "absolute top-0 right-0 left-0 bottom-0 flex p-10 cursor-pointer items-center justify-center"
+                   :style {:background-color "rgba(0,0,0,0.3)"}
                    :on-click (fn []
                                (dispatch [:state/open-modal! nil]))}
-     [:div.modal {:tw "shadow bg-white rounded h-full w-full max-w-40rem p-10 cursor-default"
+     [:div.modal {:tw "shadow bg-white rounded w-full max-w-40rem p-10 cursor-default"
                   :on-click-capture (fn [e]
                                       (.stopPropagation e))}
       (case modal-id
