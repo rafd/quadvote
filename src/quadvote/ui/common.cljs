@@ -40,14 +40,16 @@
                      {:position "absolute"
                       :z-index 1000}
                      (when @container-el
-                       (let [rect (.getBoundingClientRect @container-el)]
+                       (let [rect (.getBoundingClientRect @container-el)
+                             scroll-x (.-scrollX js/window)
+                             scroll-y (.-scrollY js/window)]
                          (case position
                            :right
-                           {:top (str (.-top rect) "px")
-                            :left (str (+ (.-left rect) (.-width rect)) "px")}
+                           {:top (str (+ (.-top rect) scroll-y) "px")
+                            :left (str (+ (.-left rect) (.-width rect) scroll-x) "px")}
                            :left
-                           {:top 0
-                            :right (str (.-offsetWidth @container-el) "px")}
+                           {:top (str (+ (.-top rect) scroll-y) "px")
+                            :right (str (+ (.-right rect) scroll-x) "px")}
                            {}))))}
        popover-content])]))
 
