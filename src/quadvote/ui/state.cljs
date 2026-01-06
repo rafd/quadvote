@@ -58,15 +58,11 @@
   (fn [_ [_ data]]
     {:db {:client.db/topics (key-by :topic/id (:api.data/topics data))
           :client.db/topic-voice-amounts (:api.data/topic-voice-amounts data)
-          :client.db/sorted-topic-ids
-          (->> (:api.data/topics data)
-               (sort-by (fn [topic]
-                          (get-in data [:api.data/topic-voice-amounts (:topic/id topic)])))
-               (map :topic/id)
-               reverse)
+          :client.db/sorted-topic-ids []
           :client.db/me (:api.data/user data)
           :client.db/my-balance (:api.data/balance data)
-          :client.db/my-votes (key-by :vote/topic-id (:api.data/votes data))}}))
+          :client.db/my-votes (key-by :vote/topic-id (:api.data/votes data))}
+     :dispatch [::resort!]}))
 
 (reg-event-fx ::resort!
   (fn [{db :db} _]
