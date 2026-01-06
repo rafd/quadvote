@@ -34,7 +34,7 @@
     [:tr [:td "16"] [:td "4"]]
     [:tr [:td "25"] [:td "5"]]]
    [:p "You can adjust your votes any time."]
-   [:p "When Raf spends a day on a project, tokens spent that project will be consumed."]
+   [:p "When Raf spends a day on a project, tokens spent on that project will be consumed."]
    [:p "New tokens can be claimed by logging in once a month."]
    [:p "(This is an experiment in applied " [:a {:tw "underline decoration-from-font"
                                                  :target "_blank"
