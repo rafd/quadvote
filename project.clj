@@ -14,7 +14,8 @@
   :plugins [[io.bloomventures/omni "0.32.2"]]
   :omni-config quadvote.omni-config/omni-config
 
-  :profiles {:dev {:source-paths ["src" "dev-src"]}
+  :profiles {:dev {:source-paths ["src" "dev-src"]
+                   :dependencies [[org.clojure/data.csv "1.1.1"]]}
              :uberjar {:aot [quadvote.core]
                        :prep-tasks [["omni" "compile"]
                                     "compile"]}})
