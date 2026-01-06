@@ -46,7 +46,7 @@
                    :style {:background-color "rgba(0,0,0,0.3)"}
                    :on-click (fn []
                                (dispatch [:state/open-modal! nil]))}
-     [:div.modal {:tw "shadow bg-white rounded w-full max-w-40rem p-10 cursor-default"
+     [:div.modal {:tw "shadow bg-white rounded w-full max-h-full max-w-40rem p-10 cursor-default overflow-y-auto"
                   :on-click-capture (fn [e]
                                       (.stopPropagation e))}
       (case modal-id
