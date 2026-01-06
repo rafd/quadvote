@@ -166,7 +166,7 @@
            [:div {:tw "px-1 w-4 h-4"}])]])]
     (when @show-description?
       [:div.description
-       {:tw "px-4 whitespace-pre prose text-xs border-t border-gray-300"
+       {:tw "px-4 whitespace-pre-wrap prose text-xs border-t border-gray-300"
         :dangerouslySetInnerHTML
         {:__html
          (md/md->html
