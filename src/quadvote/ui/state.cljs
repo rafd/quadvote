@@ -70,6 +70,7 @@
            (->> db
                 :client.db/topics
                 vals
+                shuffle ;; force randomness for equal ones
                 (sort-by (fn [topic]
                            (get-in db [:client.db/topic-voice-amounts (:topic/id topic)])))
                 (map :topic/id)
