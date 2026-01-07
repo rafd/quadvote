@@ -4,6 +4,9 @@
 
 (def purple "#7c3aed")
 
+(defn color [x]
+  (str "oklch(70% 20%" (hash x) ")"))
+
 (defn token-icon []
   [:span "⧫"])
 

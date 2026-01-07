@@ -28,11 +28,25 @@
                          (state/refresh! membership)))))]
    [:div.topic {:tw "bg-white rounded overflow-hidden shadow"}
     [:div.main {:tw "flex justify-between items-center"}
-     [:div.title {:tw "p-4 flex gap-2 items-center cursor-pointer group"
+     [:div.title {:tw "p-4 flex flex-wrap justify-between grow gap-2 items-center cursor-pointer group"
                   :on-click (fn []
                               (swap! show-description? not))}
       (:topic/title topic)
-      [fa/fa-info-circle-solid {:tw "w-3 h-3 text-gray-400 group:hover:text-gray-600"}]]
+      [fa/fa-info-circle-solid {:tw "w-3 h-3 text-gray-400 group:hover:text-gray-600"}]
+
+      [:div {:tw "grow"}]
+
+      [:div.supporters {:tw "flex -space-x-1.5"}
+       (for [{:user/keys [id name]} (->> topic
+                                         :vote/_topic
+                                         (map (fn [vote]
+                                                (:vote/user vote)))
+                                         (sort-by :user/id))]
+         ^{:key id}
+         [:div {:tw "rounded-full text-white text-center text-xs w-5 h-5 leading-5 border border-white"
+                :title name
+                :style {:background (ui/color id)}}
+          (first name)])]]
 
      (let [vote (state/topic->user-vote topic (:user/id @user))
            can-upvote? (and
