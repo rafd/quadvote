@@ -1,5 +1,6 @@
 (ns dat.api
   (:require
+   [clojure.java.io :as io]
    [datascript.core :as d]
    [bloom.commons.uuid :as uuid]
    [malli.core :as m]))
@@ -73,10 +74,11 @@
     ::db-opts db-opts
     ::schema schema
     ::conn
-    (if-let [storage (:storage db-opts)]
-      (d/restore-conn storage)
+    (if (and (:file-path db-opts)
+             (.exists (io/file (:file-path db-opts))))
+      (d/restore-conn (d/file-storage (:file-path db-opts)))
       (d/create-conn (->db-schema db-type schema)
-                     db-opts))}))
+                     {:storage (d/file-storage (:file-path db-opts))}))}))
 
 (defn clear!
   [db]

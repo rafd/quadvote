@@ -51,7 +51,7 @@
                           :entity/user
                           :user/id]}}})
 
-(defonce conn (dat/init! :dat.db/datascript schema {:storage (d/file-storage (config/get :db-path))}))
+(defonce conn (dat/init! :dat.db/datascript schema {:file-path (config/get :db-path)}))
 
 (defn entity-exists?
   [k v]
