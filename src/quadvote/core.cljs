@@ -1,9 +1,8 @@
 (ns ^:figwheel-hooks
   quadvote.core
   (:require
+   [bloom.commons.pages :as pages]
    [bloom.omni.reagent :as r]
-   [re-frame.core :refer [dispatch-sync]]
-   [quadvote.ui.state] ;; to load reframe events
    [quadvote.ui :refer [app-view]]))
 
 (enable-console-print!)
@@ -14,7 +13,7 @@
 
 (defn ^:export init
   []
-  (dispatch-sync [:state/initialize!])
+  (pages/initialize! [])
   (render))
 
 (defn ^:after-load reload

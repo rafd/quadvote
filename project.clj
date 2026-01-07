@@ -6,7 +6,6 @@
                  [com.draines/postal "2.0.3"]
                  [datascript "1.7.8"]
                  [markdown-clj "1.11.4"]
-                 [re-frame "0.10.5"]
                  [tada "0.2.2"]]
   :main quadvote.core
 

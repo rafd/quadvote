@@ -53,15 +53,6 @@
 
 (defonce conn (dat/init! :dat.db/datascript schema {:storage (d/file-storage (config/get :db-path))}))
 
-(defn votes->topic-voice-amounts
-  [votes]
-  (->> votes
-       (group-by (fn [vote]
-                   (:topic/id (:vote/topic vote))))
-       (map (fn [[topic-id votes]]
-              [topic-id (reduce + (map :vote/voice-amount votes))]))
-       (into {})))
-
 (defn entity-exists?
   [k v]
   (boolean (dat/q '[:find ?e .
@@ -153,7 +144,7 @@
          email))
 
 (comment
-  ;; inspect state
+  ;; all EAVs
   (dat/q '[:find ?e ?a ?v
           :where
           [?e ?a ?v]]

@@ -4,67 +4,6 @@
     [dat.api :as dat]
     [quadvote.state :as state]))
 
-(def queries
-  [{:id :api/data
-    :params {:user-id uuid?}
-    :return
-    (fn [{:keys [user-id]}]
-      {:api.data/topics (dat/q
-                         '[:find [(pull ?topic [:topic/id
-                                                :topic/title
-                                                :topic/description]) ...]
-                           :where
-                           [?topic :topic/id _]]
-                         @state/conn)
-       :api.data/topic-voice-amounts (state/votes->topic-voice-amounts
-                                      (dat/q
-                                       '[:find [(pull ?vote [{:vote/topic [:topic/id]}
-                                                             :vote/voice-amount]) ...]
-                                         :where
-                                         [?vote :vote/id _]]
-                                       @state/conn))
-       :api.data/user (dat/q
-                       '[:find (pull ?user [:user/id
-                                            :user/name]) .
-                         :in $ ?user-id
-                         :where
-                         [?user :user/id ?user-id]]
-                         @state/conn
-                       user-id)
-       :api.data/group-id (dat/q
-                          '[:find ?group-id .
-                            :in $ ?user-id
-                            :where
-                            [?user :user/id ?user-id]
-                            [?membership :membership/user ?user]
-                            [?membership :membership/group ?group]
-                            [?group :group/id ?group-id]]
-                          @state/conn
-                          user-id)
-       :api.data/balance (dat/q
-                          '[:find ?balance .
-                            :in $ ?user-id
-                            :where
-                            [?user :user/id ?user-id]
-                            [?membership :membership/user ?user]
-                            [?membership :membership/balance ?balance]]
-                          @state/conn
-                          user-id)
-       :api.data/votes (->> (dat/q
-                             '[:find [(pull ?vote [:vote/id
-                                                   {:vote/topic [:topic/id]}
-                                                   :vote/voice-amount]) ...]
-                               :in $ ?user-id
-                               :where
-                               [?user :user/id ?user-id]
-                               [?vote :vote/user ?user]]
-                             @state/conn
-                             user-id)
-                            (map (fn [vote]
-                                   (-> vote
-                                       (assoc :vote/topic-id (get-in vote [:vote/topic :topic/id]))
-                                       (dissoc :vote/topic)))))})}])
-
 (defn entity-exists?-condition
   [key value]
   [#(state/entity-exists? key value)
@@ -85,29 +24,92 @@
   [#(state/topic-is-within-group? topic-id group-id)
    :forbidden "Topic is not within of this group."])
 
+(def queries
+  [{:id :api/user
+    :params {:user-id uuid?}
+    :return
+    (fn [{:keys [user-id]}]
+      (dat/q
+       '[:find (pull ?user [:user/id
+                            :user/name
+                            {:membership/_user
+                             [:membership/id
+                              {:membership/group [:group/id
+                                                  :group/name]} ]}]) .
+         :in $ ?user-id
+         :where
+         [?user :user/id ?user-id]]
+       @state/conn
+       user-id))}
+
+   {:id :api/membership
+    :params {:group-id uuid?
+             :user-id uuid?}
+    :conditions
+    (fn [{:keys [user-id group-id]}]
+      [(entity-exists?-condition :user/id user-id)
+       (entity-exists?-condition :group/id group-id)
+       (user-is-member-of-group?-condition user-id group-id)])
+    :return
+    (fn [{:keys [group-id user-id]}]
+      (dat/q
+       '[:find (pull ?membership [:membership/id
+                                  :membership/admin?
+                                  :membership/balance
+                                  {:membership/group
+                                   [:group/id
+                                    :group/name
+                                    :group/balance
+                                    {:topic/_group
+                                     [:topic/id
+                                      :topic/title
+                                      :topic/description
+                                      {:topic/user
+                                       [:user/id
+                                        :user/name]}
+                                      {:vote/_topic
+                                       [:vote/id
+                                        :vote/voice-amount
+                                        {:vote/user [:user/id
+                                                     :user/name]}]}]}]}]) .
+         :in $ ?group-id ?user-id
+         :where
+         [?group :group/id ?group-id]
+         [?user :user/id ?user-id]
+         [?membership :membership/group ?group]
+         [?membership :membership/user ?user]]
+       @state/conn
+       group-id
+       user-id))}])
+
 (def commands
   [
 
    {:id :api/vote!
-    :params {:vote-id uuid?
-             :topic-id uuid?
-             :group-id uuid?
+    :params {:topic-id uuid?
              :voice-amount (fn [x]
                              (and
                                (int? x)
                                (<= 0 x 5)))
              :user-id uuid?}
     :conditions
-    (fn [{:keys [topic-id voice-amount user-id group-id]}]
-      [(entity-exists?-condition :user/id user-id)
-       (entity-exists?-condition :topic/id topic-id)
-       (topic-is-within-group?-condition topic-id group-id)
-       (user-is-member-of-group?-condition user-id group-id)
-       [#(state/user-can-afford? {:user-id user-id
-                                  :group-id group-id
-                                  :topic-id topic-id
-                                  :voice-amount voice-amount})
-        :invalid "User has insufficient tokens to upvote"]])
+    (fn [{:keys [topic-id voice-amount user-id]}]
+      (let [group-id (dat/q '[:find ?group-id .
+                              :in $ ?topic-id
+                              :where
+                              [?t :topic/id ?topic-id]
+                              [?t :topic/group ?g]
+                              [?g :group/id ?group-id]]
+                            @state/conn
+                            topic-id)]
+        [(entity-exists?-condition :user/id user-id)
+         (entity-exists?-condition :topic/id topic-id)
+         (user-is-member-of-group?-condition user-id group-id)
+         [#(state/user-can-afford? {:user-id user-id
+                                    :group-id group-id
+                                    :topic-id topic-id
+                                    :voice-amount voice-amount})
+          :invalid "User has insufficient tokens to upvote"]]))
     :effect
     (fn [{:keys [topic-id voice-amount user-id]}]
       (let [vote-id (dat/q '[:find ?vote-id .

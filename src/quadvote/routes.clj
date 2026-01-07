@@ -16,12 +16,7 @@
         (config/get :omni-secret))))
 
 (def routes
-  [[[:get "/api/auth"]
-    (fn [request]
-      {:status 200
-       :body {:authed? (state/entity-exists? :user/id (:user-id (:session request)))}})]
-
-   [[:post "/api/auth"]
+  [[[:post "/api/auth"]
     (fn [request]
       (let [email (get-in request [:body-params :email])]
         (if-let [user-id (state/email->user-id email)]
