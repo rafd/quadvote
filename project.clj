@@ -3,11 +3,9 @@
                  [org.clojure/clojurescript "1.12.134" :exclusions [com.fasterxml.jackson.core/jackson-core]]
                  [io.bloomventures/omni "0.34.1"]
                  [io.bloomventures/commons "0.15.1"]
-                 [com.taoensso/nippy "3.6.0"]
                  [com.draines/postal "2.0.3"]
                  [datascript "1.7.8"]
                  [markdown-clj "1.11.4"]
-                 [duratom "0.5.9"]
                  [re-frame "0.10.5"]
                  [tada "0.2.2"]]
   :main quadvote.core
