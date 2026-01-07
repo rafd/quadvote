@@ -72,8 +72,11 @@
    {::db-type db-type
     ::db-opts db-opts
     ::schema schema
-    ::conn (d/create-conn (->db-schema db-type schema)
-                          db-opts)}))
+    ::conn
+    (if-let [storage (:storage db-opts)]
+      (d/restore-conn storage)
+      (d/create-conn (->db-schema db-type schema)
+                     db-opts))}))
 
 (defn clear!
   [db]
