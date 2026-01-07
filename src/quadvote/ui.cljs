@@ -76,8 +76,13 @@
      (let [vote @(subscribe [:state/vote-for-topic (:topic/id topic)])
            can-upvote? (and
                         (< (:vote/voice-amount vote) model/max-voice-amount-per-vote)
-                        (model/can-afford? @(subscribe [:state/my-balance])
-                                           (:vote/voice-amount vote) (inc (:vote/voice-amount vote))))]
+                        (model/can-afford?
+                         {:balance
+                         @(subscribe [:state/my-balance])
+                          :old-voice-amount
+                          (:vote/voice-amount vote)
+                          :new-voice-amount
+                          (inc (:vote/voice-amount vote))}))]
        [:div.meta {:tw ["flex px-2 items-center gap-1 self-stretch"
                         (if vote
                           "bg-green-200 border-l border-green-300"

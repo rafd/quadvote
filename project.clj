@@ -5,6 +5,7 @@
                  [io.bloomventures/commons "0.15.1"]
                  [com.taoensso/nippy "3.6.0"]
                  [com.draines/postal "2.0.3"]
+                 [datascript "1.7.8"]
                  [markdown-clj "1.11.4"]
                  [duratom "0.5.9"]
                  [re-frame "0.10.5"]

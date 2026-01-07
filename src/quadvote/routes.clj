@@ -19,25 +19,26 @@
   [[[:get "/api/auth"]
     (fn [request]
       {:status 200
-       :body {:authed? (boolean (get-in @state/state [:db/users (:user-id (:session request))]))}})]
+       :body {:authed? (state/entity-exists? :user/id (:user-id (:session request)))}})]
 
    [[:post "/api/auth"]
     (fn [request]
-      (if-let [user (state/user-by-email (get-in request [:body-params :email]))]
-        (do
-          (future
-            (let [link (wrap-login {:url "/"
-                                    :user-id (:user/id user)})]
-              (email/send!
-               {:to (:user/email user)
-                :subject "QuadVote Login Link"
-                :body [:div
-                       [:p
-                        [:a {:href link} "Click here"] " to log into QuadVote, or follow the link below:"]
-                       [:p
-                        [:a {:href link} link]]]})))
-          {:status 200})
-        {:status 400}))]
+      (let [email (get-in request [:body-params :email])]
+        (if-let [user-id (state/email->user-id email)]
+          (do
+            (future
+              (let [link (wrap-login {:url "/"
+                                      :user-id user-id})]
+                (email/send!
+                 {:to email
+                  :subject "QuadVote Login Link"
+                  :body [:div
+                         [:p
+                          [:a {:href link} "Click here"] " to log into QuadVote, or follow the link below:"]
+                         [:p
+                          [:a {:href link} link]]]})))
+            {:status 200})
+          {:status 400})))]
 
    [[:delete "/api/auth"]
     (fn [_]

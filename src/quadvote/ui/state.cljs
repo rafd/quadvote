@@ -31,6 +31,7 @@
   (fn [_ _]
     {:db {:client.db/topics {}
           :client.db/topic-voice-amounts {}
+          :client.db/group-id nil
           :client.db/me nil
           :client.db/my-balance nil
           :client.db/my-votes {}
@@ -59,6 +60,7 @@
     {:db {:client.db/topics (key-by :topic/id (:api.data/topics data))
           :client.db/topic-voice-amounts (:api.data/topic-voice-amounts data)
           :client.db/sorted-topic-ids []
+          :client.db/group-id (:api.data/group-id data)
           :client.db/me (:api.data/user data)
           :client.db/my-balance (:api.data/balance data)
           :client.db/my-votes (key-by :vote/topic-id (:api.data/votes data))}
@@ -107,6 +109,7 @@
        :tada [:api/vote!
               {:vote-id (:vote/id vote)
                :topic-id topic-id
+               :group-id (:client.db/group-id db)
                :voice-amount new-voice-amount}
               {:on-success (fn [_]
                              #_(dispatch [::fetch-data!]))}]})))
@@ -116,7 +119,7 @@
     {:db (assoc db :client.db/modal modal-id)}))
 
 (reg-event-fx :state/create-topic!
-  (fn [{db :db} [_ text]]
+  (fn [_ [_ text]]
     {:tada [:api/create-topic!
             {:id (uuid/random)
              :text text}

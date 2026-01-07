@@ -1,121 +1,160 @@
 (ns quadvote.state
   (:require
-   [bloom.commons.uuid :as uuid]
+   [dat.api :as dat]
+   [datascript.core :as d]
    [quadvote.model :as model]
-   [taoensso.nippy :as nippy]
-   [quadvote.config :as config]
-   [duratom.core :as d]))
+   [quadvote.config :as config]))
 
-;; topic
-;;  topic/id
-;;  topic/title
-;;  topic/description
+(def schema
+  {:entity/group
+   {:group/id {:dat/spec :uuid
+               :dat/unique :dat.unique/identity}
+    :group/name {:dat/spec :string}}
 
-;; vote
-;;   vote/id
-;;   vote/topic-id
-;;   vote/user-id
-;;   vote/voice-amount
+   :entity/user
+   {:user/id {:dat/spec :uuid
+              :dat/unique :dat.unique/identity}
+    :user/name {:dat/spec :string}
+    :user/email {:dat/spec :string}}
 
-;; user
-;;  user/id
-;;  user/name
-;;  user/email
+   :entity/membership
+   {:membership/id {:dat/spec :uuid
+                    :dat/unique :dat.unique/identity}
+    :membership/balance {:dat/spec :int}
+    :membership/admin? {:dat/spec :boolean}
+    :membership/user {:dat/rel [:dat.rel/one
+                                :entity/user
+                                :user/id]}
+    :membership/group {:dat/rel [:dat.rel/one
+                                 :entity/group
+                                 :group/id]}}
 
-;; :db/topics  {:topic/id topic}
-;; :db/users   {:user/id user}
-;; :db/balances {:user/id balance}
-;; :db/votes {:vote/id vote}
+   :entity/topic
+   {:topic/id {:dat/spec :uuid
+               :dat/unique :dat.unique/identity}
+    :topic/title {:dat/spec :string}
+    :topic/description {:dat/spec :string}
+    :topic/group {:dat/rel [:dat.rel/one
+                            :entity/group
+                            :group/id]}
+    :topic/user {:dat/rel [:dat.rel/one
+                           :entity/user
+                           :user/id]}}
+   :entity/vote
+   {:vote/id {:dat/spec :uuid
+              :dat/unique :dat.unique/identity}
+    :vote/voice-amount {:dat/spec :int}
+    :vote/topic {:dat/rel [:dat.rel/one
+                           :entity/topic
+                           :topic/id]}
+    :vote/user {:dat/rel [:dat.rel/one
+                          :entity/user
+                          :user/id]}}})
 
-(def initial-state
-  {:db/topics {}
-   :db/users {}
-   :db/balances {}
-   :db/votes {}})
-
-(defonce state (d/duratom :local-file
-                          :file-path (config/get :db-file-path)
-                          :init initial-state
-                          :rw {:read nippy/thaw-from-file
-                               :write nippy/freeze-to-file}))
+(defonce conn (dat/init! :dat.db/datascript schema {:storage (d/file-storage (config/get :db-path))}))
 
 (defn votes->topic-voice-amounts
   [votes]
   (->> votes
-       (group-by :vote/topic-id)
+       (group-by (fn [vote]
+                   (:topic/id (:vote/topic vote))))
        (map (fn [[topic-id votes]]
               [topic-id (reduce + (map :vote/voice-amount votes))]))
        (into {})))
 
+(defn entity-exists?
+  [k v]
+  (boolean (dat/q '[:find ?e .
+                    :in $ ?k ?v
+                    :where
+                    [?e ?k ?v]]
+                  @conn k v)))
+
 (defn user-can-afford?
-  [{:keys [user-id topic-id vote-id voice-amount]}]
-  (let [vote (get-in @state [:db/votes vote-id])
-        topic (get-in @state [:db/topics topic-id])
-        balance (get-in @state [:db/balances user-id])]
-    (model/can-afford? balance
-                       (or (:vote/voice-amount vote) 0)
-                       voice-amount)))
+  [{:keys [user-id group-id topic-id voice-amount]}]
+  (model/can-afford?
+   {:balance
+    (dat/q
+     '[:find ?balance .
+       :in $ ?user-id ?group-id
+       :where
+       [?u :user/id ?user-id]
+       [?g :group/id ?group-id]
+       [?m :membership/user ?u]
+       [?m :membership/group ?g]
+       [?m :membership/balance ?balance]]
+     @conn
+     user-id
+     group-id)
+    :old-voice-amount
+    (or (dat/q
+         '[:find ?voice-amount .
+           :in $ ?user-id ?topic-id
+           :where
+           [?u :user/id ?user-id]
+           [?t :topic/id ?topic-id]
+           [?v :vote/user ?u]
+           [?v :vote/topic ?t]
+           [?v :vote/voice-amount ?voice-amount]]
+         @conn
+         user-id
+         topic-id)
+        0)
+    :new-voice-amount
+    voice-amount}))
 
-(defn user-has-no-other-vote-for-topic?
-  [user-id vote-id topic-id]
-  (empty?
-    (->> (:db/votes @state)
-         vals
-         (filter (fn [vote]
-                   (and
-                     (= user-id (:vote/user-id vote))
-                     (= topic-id (:vote/topic-id vote)))))
-         (remove (fn [vote]
-                   (= vote-id (:vote/id vote)))))))
+(defn user-is-admin-of-group?
+  [user-id group-id]
+  (boolean (dat/q '[:find ?e .
+                    :in $ ?user-id ?group-id
+                    :where
+                    [?u :user/id ?user-id]
+                    [?g :group/id ?group-id]
+                    [?e :membership/user ?u]
+                    [?e :membership/group ?g]
+                    [?e :membership/admin? true]]
+                  @conn
+                  user-id
+                  group-id)))
 
-(defn user-with-id-exists?
-  [user-id]
-  (boolean (get-in @state [:db/users user-id])))
+(defn user-is-member-of-group?
+  [user-id group-id]
+  (boolean (dat/q '[:find ?e .
+                    :in $ ?user-id ?group-id
+                    :where
+                    [?u :user/id ?user-id]
+                    [?g :group/id ?group-id]
+                    [?e :membership/user ?u]
+                    [?e :membership/group ?g]]
+                  @conn
+                  user-id
+                  group-id)))
 
-(defn user-by-email
+(defn topic-is-within-group?
+  [topic-id group-id]
+  (boolean (dat/q '[:find ?t .
+                    :in $ ?topic-id ?group-id
+                    :where
+                    [?t :topic/id ?topic-id]
+                    [?g :group/id ?group-id]
+                    [?t :topic/group ?g]]
+                  @conn
+                  topic-id
+                  group-id)))
+
+(defn email->user-id
   [email]
-  (->> (:db/users @state)
-       (some (fn [[_ user]]
-               (when (= email (:user/email user))
-                 user)))))
+  (dat/q '[:find ?id .
+           :in $ ?email
+           :where
+           [?e :user/email ?email]
+           [?e :user/id ?id]]
+         @conn
+         email))
 
-(defn user-is-admin?
-  [user-id]
-  (get-in @state [:db/users user-id :user/admin?]))
-
-(defn topic-with-id-exists?
-  [topic-id]
-  (boolean (get-in @state [:db/topics topic-id])))
-
-;; actions
-
-(defn create-user!
-  [{:keys [name email admin?]}]
-  (let [id (uuid/random)]
-    (swap! state assoc-in [:db/users id]
-           {:user/id id
-            :user/name name
-            :user/email email
-            :user/admin? admin?})))
-
-(defn create-topic!
-  [{:keys [title description]}]
-  (let [id (uuid/random)]
-    (swap! state assoc-in [:db/topics id]
-           {:topic/id id
-            :topic/title title
-            :topic/description description})))
-
-(defn vote!
-  [vote-id topic-id user-id voice-amount]
-  (if (= 0 voice-amount)
-    (swap! state update :db/votes dissoc vote-id)
-    (swap! state assoc-in [:db/votes vote-id]
-           {:vote/id vote-id
-            :vote/topic-id topic-id
-            :vote/user-id user-id
-            :vote/voice-amount voice-amount})))
-
-(defn claim-token!
-  [user-id]
-  (swap! state update-in [:db/balances user-id] inc 50))
+(comment
+  ;; inspect state
+  (dat/q '[:find ?e ?a ?v
+          :where
+          [?e ?a ?v]]
+        @conn))

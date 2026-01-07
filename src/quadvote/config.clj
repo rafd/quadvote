@@ -12,7 +12,7 @@
       [:omni-secret :string]
       [:environment [:enum :prod :dev]]
       [:website-base-url :string]
-      [:db-file-path :string]
+      [:db-path :string]
       [:smtp-credentials
        {:optional true}
        [:map

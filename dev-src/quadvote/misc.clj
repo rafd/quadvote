@@ -9,11 +9,12 @@
    [quadvote.state]))
 
 (comment
+
   ;; create admin user
   (quadvote.state/create-user!
    {:name "Raf" :email "rafal.dittwald@gmail.com" :admin? true})
 
-  (def admin-id (:user/id (quadvote.state/user-by-email "rafal.dittwald@gmail.com")))
+  (def admin-id (quadvote.state/email->user-id "admin@example.com"))
   ;; create users
 
   (doseq [[name email] (->> (slurp "/tmp/people.csv")
@@ -47,7 +48,7 @@
   ;; login link
   (quadvote.routes/wrap-login
    {:url "/"
-    :user-id (quadvote.state/user-by-email "")})
+    :user-id (quadvote.state/email->user-id "")})
 
   ;; check state
   (clojure.pprint/pprint (deref quadvote.state/state)))
