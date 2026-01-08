@@ -2,7 +2,8 @@
   (:require
     [tada.events.core :as tada]
     [dat.api :as dat]
-    [quadvote.state :as state]))
+    [quadvote.state :as state]
+    [quadvote.model :as model]))
 
 (defn entity-exists?-condition
   [key value]
@@ -112,24 +113,45 @@
           :invalid "User has insufficient tokens to upvote"]]))
     :effect
     (fn [{:keys [topic-id voice-amount user-id]}]
-      (let [vote-id (dat/q '[:find ?vote-id .
-                             :in $ ?user-id ?topic-id
-                             :where
-                             [?u :user/id ?user-id]
-                             [?t :topic/id ?topic-id]
-                             [?v :vote/user ?u]
-                             [?v :vote/topic ?t]
-                             [?v :vote/id ?vote-id]]
-                           @state/conn
-                           user-id
-                           topic-id)]
-        (dat/transact! state/conn
-         (if (= 0 voice-amount)
-           [[:db/retractEntity [:vote/id vote-id]]]
-           [{:vote/id (or vote-id (dat/uuid))
+      (let [[vote-id previous-amount] (first (dat/q '[:find ?vote-id ?previous-amount
+                                                      :in $ ?user-id ?topic-id
+                                                      :where
+                                                      [?u :user/id ?user-id]
+                                                      [?t :topic/id ?topic-id]
+                                                      [?v :vote/user ?u]
+                                                      [?v :vote/topic ?t]
+                                                      [?v :vote/id ?vote-id]
+                                                      [?v :vote/voice-amount ?previous-amount]]
+                                                    @state/conn
+                                                    user-id
+                                                    topic-id))
+            [membership-id balance] (first (dat/q '[:find ?membership-id ?balance
+                                                    :in $ ?user-id ?topic-id
+                                                    :where
+                                                    [?u :user/id ?user-id]
+                                                    [?t :topic/id ?topic-id]
+                                                    [?t :topic/group ?g]
+                                                    [?g :group/id ?group-id]
+                                                    [?m :membership/user ?u]
+                                                    [?m :membership/group ?g]
+                                                    [?m :membership/id ?membership-id]
+                                                    [?m :membership/balance ?balance]]
+                                                  @state/conn
+                                                  user-id
+                                                  topic-id))]
+        (dat/transact!
+         state/conn
+         [(if (= 0 voice-amount)
+            [:db/retractEntity [:vote/id vote-id]]
+            {:vote/id (or vote-id (dat/uuid))
              :vote/topic [:topic/id topic-id]
              :vote/user [:user/id user-id]
-             :vote/voice-amount voice-amount}]))))}
+             :vote/voice-amount voice-amount})
+          {:membership/id membership-id
+           :membership/balance (let [delta (model/token-cost
+                                            (or previous-amount 0)
+                                            voice-amount)]
+                                 (- balance delta))}])))}
 
    {:id :api/claim-tokens!
     :params {:secret string?
