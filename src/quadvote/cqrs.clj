@@ -8,7 +8,7 @@
 (defn entity-exists?-condition
   [key value]
   [#(state/entity-exists? key value)
-   :invalid "Entity with " [key value] " does not exist."])
+   :invalid (str "Entity with " [key value] " does not exist.")])
 
 (defn user-is-admin-of-group?-condition
   [user-id group-id]
@@ -65,6 +65,13 @@
                                      [:topic/id
                                       :topic/title
                                       :topic/description
+                                      {:topic/burn
+                                       [:burn/id
+                                        :burn/message
+                                        :burn/timestamp
+                                        {:burn/user
+                                         [:user/id
+                                          :user/name]}]}
                                       {:topic/user
                                        [:user/id
                                         :user/name]}
@@ -233,21 +240,33 @@
                        :topic/title title
                        :topic/description description}]))}
 
-   {:id :api/remove-topic!
+   {:id :api/burn-topic!
     :params {:topic-id uuid?
-             :user-id uuid?
-             :group-id uuid?}
+             :message string?
+             :user-id uuid?}
     :conditions
-    (fn [{:keys [user-id group-id topic-id]}]
+    (fn [{:keys [user-id topic-id]}]
       [(entity-exists?-condition :user/id user-id)
        (entity-exists?-condition :topic/id topic-id)
-       (entity-exists?-condition :group/id group-id)
-       (topic-is-within-group?-condition topic-id group-id)
-       (user-is-admin-of-group?-condition user-id group-id)])
+       [(fn []
+          (let [group-id (dat/q '[:find ?group-id .
+                                  :in $ ?topic-id
+                                  :where
+                                  [?t :topic/id ?topic-id]
+                                  [?t :topic/group ?g]
+                                  [?g :group/id ?group-id]]
+                                @state/conn
+                                topic-id)]
+            (user-is-admin-of-group?-condition user-id group-id)))
+        :forbidden "User is not an admin of the group that owns this topic."]])
     :effect
-    (fn [{:keys [topic-id]}]
-      ;; TODO
-      )}])
+    (fn [{:keys [user-id topic-id message]}]
+      (dat/transact! state/conn
+                     [{:topic/id topic-id
+                       :topic/burn {:burn/id (dat/uuid)
+                                    :burn/message message
+                                    :burn/user [:user/id user-id]
+                                    :burn/timestamp (java.util.Date.)}}]))}])
 
 (tada/register! (concat queries commands))
 

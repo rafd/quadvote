@@ -62,3 +62,15 @@
                   {:tw "flex gap-1 items-center border border-gray-300 p-1 rounded"}
                   opts)]
         children))
+
+(defn user-circles
+  [users]
+  [:div.users {:tw "flex -space-x-1.5"}
+   (for [{:user/keys [id name]} users]
+     ^{:key id}
+     [:div {:tw "rounded-full text-white text-center text-xs w-5 h-5 leading-5 border border-white"
+            :title name
+            :style {:background (color id)}}
+      (first name)])])
+
+

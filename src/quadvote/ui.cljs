@@ -5,6 +5,7 @@
     [goog.object :as o]
     [reagent.core :as r]
     [quadvote.ui.pages.group]
+    [quadvote.ui.pages.log]
     [quadvote.ui.pages.index]
     [quadvote.ui.common :as ui]
     [quadvote.ui.state :as state]))

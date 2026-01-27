@@ -6,10 +6,14 @@
     [quadvote.model :as model]
     [dat.api :as dat]))
 
-(defn generate-user []
-  (let [uuid (uuid/random)
-        name (apply str (take 10 (re-seq #"[a-z]" (str uuid))))]
-    {:id uuid
+(defonce uuid
+  (memoize (fn [x]
+             (uuid/random))))
+
+(defn generate-user [i]
+  (let [id (uuid i)
+        name (apply str (take 10 (re-seq #"[a-z]" (str id))))]
+    {:id id
      :name name
      :email (str name "@example.com")}))
 
@@ -21,8 +25,8 @@
   (dat/clear! state/conn)
 
   (dat/transact!
-    state/conn
-   [{:user/id (dat/uuid)
+   state/conn
+   [{:user/id (uuid ::admin)
      :user/name "Admin"
      :user/email "admin@example.com"}])
 
@@ -40,12 +44,11 @@
                             [_ :group/id ?id]]
                           @state/conn)]
 
-      (dotimes [_ 10]
+      (dotimes [i 10]
         (tada/do! :api/add-user-to-group!
-                  (assoc (generate-user)
+                  (assoc (generate-user (str "user-" i))
                          :user-id admin-user-id
                          :group-id group-id)))
-
 
       (dotimes [_ 10]
         (tada/do! :api/create-topic!
@@ -81,11 +84,16 @@
                             [{:membership/id membership-id
                               :membership/balance 25}])
              (tada/do! :api/vote!
-                       {:vote-id (uuid/random)
-                        :group-id group-id
-                        :topic-id (:topic/id topic)
+                       {:topic-id (:topic/id topic)
                         :voice-amount (inc (rand-int model/max-voice-amount-per-vote))
-                        :user-id (:user/id user)}))))))))
+                        :user-id (:user/id user)}))))
+
+        (for [topic topics
+              :when (rand-nth [false false false true])]
+          (tada/do! :api/burn-topic!
+                    {:topic-id (:topic/id topic)
+                     :message "asdf"
+                     :user-id admin-user-id}))))))
 
 #_(seed!)
 

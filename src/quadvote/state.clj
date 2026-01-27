@@ -39,7 +39,11 @@
                             :group/id]}
     :topic/user {:dat/rel [:dat.rel/one
                            :entity/user
-                           :user/id]}}
+                           :user/id]}
+    :topic/burn {:dat/rel [:dat.rel/one
+                           :entity/burn
+                           :burn/id]}}
+
    :entity/vote
    {:vote/id {:dat/spec :uuid
               :dat/unique :dat.unique/identity}
@@ -48,6 +52,15 @@
                            :entity/topic
                            :topic/id]}
     :vote/user {:dat/rel [:dat.rel/one
+                          :entity/user
+                          :user/id]}}
+
+   :entity/burn
+   {:burn/id {:dat/spec :uuid
+              :dat/unique :dat.unique/identity}
+    :burn/message {:dat/spec :string}
+    :burn/timestamp {:dat/spec :inst}
+    :burn/user {:dat/rel [:dat.rel/one
                           :entity/user
                           :user/id]}}})
 

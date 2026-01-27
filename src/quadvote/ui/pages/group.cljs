@@ -1,11 +1,13 @@
 (ns quadvote.ui.pages.group
   (:require
+   [clojure.string :as string]
    [bloom.commons.pages :as pages]
-   [reagent.core :as r]
    [bloom.commons.fontawesome :as fa]
    [bloom.commons.debounce :as debounce]
-   [quadvote.ui.common :as ui]
    [markdown.core :as md]
+   [reagent.core :as r]
+   [quadvote.ui.group-common :as group]
+   [quadvote.ui.common :as ui]
    [quadvote.model :as model]
    [quadvote.ui.state :as state]
    [quadvote.ui.modal :as modal]))
@@ -36,17 +38,11 @@
 
       [:div {:tw "grow"}]
 
-      [:div.supporters {:tw "flex -space-x-1.5"}
-       (for [{:user/keys [id name]} (->> topic
-                                         :vote/_topic
-                                         (map (fn [vote]
-                                                (:vote/user vote)))
-                                         (sort-by :user/id))]
-         ^{:key id}
-         [:div {:tw "rounded-full text-white text-center text-xs w-5 h-5 leading-5 border border-white"
-                :title name
-                :style {:background (ui/color id)}}
-          (first name)])]]
+      [ui/user-circles (->> topic
+                            :vote/_topic
+                            (map (fn [vote]
+                                   (:vote/user vote)))
+                            (sort-by :user/id))]]
 
      (let [vote (state/topic->user-vote topic (:user/id @user))
            can-upvote? (and
@@ -139,34 +135,24 @@
              [fa/fa-caret-down-solid {:tw "w-4 h-4"}]]]
            [:div {:tw "px-1 w-4 h-4"}])]])]
     (when @show-description?
-      [:div.description
-       {:tw "px-4 whitespace-pre-wrap prose text-xs border-t border-gray-300"
-        :dangerouslySetInnerHTML
-        {:__html
-         (md/md->html
-          (:topic/description topic))}}])]))
-
-(defn header-view
-  [membership]
-  [:div.header {:tw "flex justify-between items-center pb-4 gap-3"}
-   [:h1 {:tw "grow"}
-    (:group/name (:membership/group membership))]
-   #_[ui/button {:on-click (fn [] (modal/open! :modal/new-topic))}
-      [fa/fa-plus-circle-solid {:tw "w-4 h-4"}]
-      "Suggest a Topic"]
-   [ui/button {:on-click (fn [] (modal/open! :modal/info))}
-    [fa/fa-question-circle-solid {:tw "w-3 h-3"}]
-    [:span {:tw "text-xs"} "WTF?"]]
-   [:div.my-balance {:tw "flex items-center gap-1"}
-    [ui/token-amount-view (:membership/balance membership) nil]]
-   [ui/button {:on-click (fn []
-                           (state/ajax!
-                            {:uri "/api/auth"
-                             :method :delete
-                             :on-success (fn [_]
-                                           (js/window.location.reload))
-                             :on-error (fn [])}))}
-    [fa/fa-sign-out-alt-solid {:tw "w-3 h-3"}]]])
+      [:div.extra {:tw "px-4 border-t border-gray-300 flex"}
+       [:div.description
+        {:tw "whitespace-pre-wrap text-xs prose grow"
+         :dangerouslySetInnerHTML
+         {:__html
+          (md/md->html
+           (:topic/description topic))}}]
+       [:div.actions {:tw "py-4"}
+        (when (:membership/admin? @membership)
+          [ui/button {:on-click (fn []
+                                  (let [message (js/prompt "Message:")]
+                                    (when-not (string/blank? message)
+                                      (-> (state/tada! [:api/burn-topic!
+                                                        {:topic-id (:topic/id topic)
+                                                         :message message}])
+                                          (.then (fn []
+                                                   (state/refresh! membership)))))))}
+           "Burn"])]])]))
 
 (defn view
   [[_ {:keys [id]}]]
@@ -180,29 +166,29 @@
     ;; update order of topics with a delay
     ;; for a better user experience
     sorted-topic-ids (r/atom [])
-    resort-topics! (debounce/debounce
-                    (fn [topics]
-                      (reset! sorted-topic-ids
-                              (->> topics
-                                   shuffle ;; force random order for equal scoring topics
-                                   (sort-by state/topic->total-voice-amount >)
-                                   (map :topic/id))))
-                    750)
+    resort-topics! (fn [topics]
+                         (reset! sorted-topic-ids
+                                 (->> topics
+                                      shuffle ;; force random order for equal scoring topics
+                                      (sort-by state/topic->total-voice-amount >)
+                                      (map :topic/id))))
+    _ (resort-topics! (-> @membership :membership/group :topic/_group))
+    resort-topics-debounced! (debounce/debounce resort-topics! 750)
     _ (r/track!
        (fn []
-         (resort-topics! (-> @membership :membership/group :topic/_group))))]
-   [:div {:tw "px-8 p-4 max-w-40rem mx-auto"}
-    [modal/modal-view]
-    [header-view @membership]
+         (resort-topics-debounced! (-> @membership :membership/group :topic/_group))))]
+   [group/page
+    {:membership membership}
     [:div.topics {:tw "space-y-2"}
      (let [->topic @id->topic]
-      (for [topic (->> @sorted-topic-ids
-                       (map ->topic))]
-        ^{:key (:topic/id topic)}
-        [topic-view
-         {:membership membership
-          :user user}
-         topic]))]]))
+       (for [topic (->> @sorted-topic-ids
+                        (map ->topic)
+                        (remove :topic/burn))]
+         ^{:key (:topic/id topic)}
+         [topic-view
+          {:membership membership
+           :user user}
+          topic]))]]))
 
 (pages/register-page!
  {:page/id :page/group
