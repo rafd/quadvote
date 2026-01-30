@@ -20,6 +20,7 @@
       :refund "⤴"
       :cost [:div {:style {:transform "rotate(90deg)"}} "⤵"]
       :current "="
+      :gain "+"
       nil)]
    [:span (Math/abs amount)] [token-icon]])
 

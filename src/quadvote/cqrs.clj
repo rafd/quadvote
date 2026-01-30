@@ -57,6 +57,7 @@
        '[:find (pull ?membership [:membership/id
                                   :membership/admin?
                                   :membership/balance
+                                  :membership/claimable-token-amount
                                   {:membership/group
                                    [:group/id
                                     :group/name
@@ -160,19 +161,6 @@
                                             voice-amount)]
                                  (- balance delta))}])))}
 
-   {:id :api/claim-tokens!
-    :params {:secret string?
-             :user-id uuid?}
-    :conditions
-    (fn [{:keys [secret user-id]}]
-      [(entity-exists?-condition :user/id user-id)])
-    ;; secret exists
-    ;; user hasn't claimed this secret already
-    :effect
-    (fn [{:keys [user-id]}]
-      ;; TODO
-      )}
-
    {:id :api/create-group!
     :params {:name string?
              :user-id uuid?}
@@ -188,6 +176,8 @@
           :group/name name}
          {:membership/id (dat/uuid)
           :membership/user [:user/id user-id]
+          :membership/balance 25
+          :membership/claimable-token-amount 25
           :membership/group -1
           :membership/admin? true}]))}
 
@@ -212,12 +202,16 @@
                      (if-let [user-id (state/email->user-id email)]
                        [{:membership/id (dat/uuid)
                          :membership/user [:user/id user-id]
+                         :membership/claimable-token-amount 25
+                         :membership/balance 0
                          :membership/group [:group/id group-id]}]
                        [{:db/id -1
                          :user/id (dat/uuid)
                          :user/name name
                          :user/email email}
                         {:membership/id (dat/uuid)
+                         :membership/claimable-token-amount 25
+                         :membership/balance 0
                          :membership/user -1
                          :membership/group [:group/id group-id]}])))}
 
@@ -266,7 +260,45 @@
                        :topic/burn {:burn/id (dat/uuid)
                                     :burn/message message
                                     :burn/user [:user/id user-id]
-                                    :burn/timestamp (java.util.Date.)}}]))}])
+                                    :burn/timestamp (java.util.Date.)}}]))}
+
+   {:id :api/claim!
+    :params {:membership-id uuid?
+             :user-id uuid?}
+    :conditions
+    (fn [{:keys [membership-id user-id]}]
+      [(entity-exists?-condition :user/id user-id)
+       (entity-exists?-condition :membership/id membership-id)
+       [#(boolean (dat/q '[:find ?user-id .
+                           :in $ ?user-id ?membership-id
+                           :where
+                           [?u :user/id ?user-id]
+                           [?m :membership/id ?membership-id]
+                           [?m :membership/user ?u]]
+                         @state/conn
+                         user-id
+                         membership-id))
+        :forbidden "This membership does not belong to this user"]])
+    :effect
+    (fn [{:keys [membership-id]}]
+      ;; race condition - querying seperately from transaction
+      (let [[balance claimable-token-amount]
+            (dat/q '[:find [?balance ?claimable]
+                     :in $ ?membership-id
+                     :where
+                     [?m :membership/id ?membership-id]
+                     [?m :membership/balance ?balance]
+                     [?m :membership/claimable-token-amount ?claimable]]
+                   @state/conn
+                   membership-id)]
+        (dat/transact! state/conn
+                       [{:membership/id membership-id
+                         :membership/claimable-token-amount 0
+                         :membership/balance (+ balance
+                                                claimable-token-amount)}
+                        {:claim/id (dat/uuid)
+                         :claim/membership [:membership/id membership-id]
+                         :claim/timestamp (java.util.Date.)}])))}])
 
 (tada/register! (concat queries commands))
 

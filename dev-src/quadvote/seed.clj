@@ -13,8 +13,7 @@
 (defn generate-user [i]
   (let [id (uuid i)
         name (apply str (take 10 (re-seq #"[a-z]" (str id))))]
-    {:id id
-     :name name
+    {:name name
      :email (str name "@example.com")}))
 
 (defn generate-topic []
@@ -80,13 +79,17 @@
                                           (:user/id user)
                                           group-id)]]
            (do
-             (dat/transact! state/conn
-                            [{:membership/id membership-id
-                              :membership/balance 25}])
-             (tada/do! :api/vote!
-                       {:topic-id (:topic/id topic)
-                        :voice-amount (inc (rand-int model/max-voice-amount-per-vote))
-                        :user-id (:user/id user)}))))
+             (tada/do! :api/claim!
+                       {:membership-id membership-id
+                        :user-id (:user/id user)})
+
+             (try
+               (tada/do! :api/vote!
+                         {:topic-id (:topic/id topic)
+                          :voice-amount (inc (rand-int model/max-voice-amount-per-vote))
+                          :user-id (:user/id user)})
+               (catch Exception _
+                 nil)))))
 
         (for [topic topics
               :when (rand-nth [false false false true])]

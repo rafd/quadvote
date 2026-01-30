@@ -1,7 +1,6 @@
 (ns quadvote.state
   (:require
    [dat.api :as dat]
-   [datascript.core :as d]
    [quadvote.model :as model]
    [quadvote.config :as config]))
 
@@ -22,12 +21,22 @@
                     :dat/unique :dat.unique/identity}
     :membership/balance {:dat/spec :int}
     :membership/admin? {:dat/spec :boolean}
+    :membership/claimable-token-amount {:dat/spec :int}
     :membership/user {:dat/rel [:dat.rel/one
                                 :entity/user
                                 :user/id]}
     :membership/group {:dat/rel [:dat.rel/one
                                  :entity/group
                                  :group/id]}}
+
+   :entity/claim
+   {:claim/id {:dat/spec :uuid
+               :dat/unique :dat.unique/identity}
+    :claim/amount {:dat/spec :int}
+    :claim/timestamp {:dat/spec :inst}
+    :claim/membership {:dat/rel [:dat.rel/one
+                                 :entity/membership
+                                 :membership/id]}}
 
    :entity/topic
    {:topic/id {:dat/spec :uuid
@@ -155,6 +164,32 @@
            [?e :user/id ?id]]
          @conn
          email))
+
+(defn grant-to-group!
+  [group-id to-grant-amount]
+  ;; race condition - querying seperate from transaction
+  (let [ids-and-amounts (dat/q '[:find ?membership-id ?amount
+                                 :in $ ?group-id
+                                 :where
+                                 [?g :group/id ?group-id]
+                                 [?m :membership/group ?g]
+                                 [?m :membership/id ?membership-id]
+                                 [?m :membership/claimable-token-amount ?amount]]
+                               @conn
+                               group-id)]
+    (dat/transact!
+     conn
+     (->> ids-and-amounts
+          (map (fn [[membership-id amount]]
+                 {:membership/id membership-id
+                  :membership/claimable-token-amount (max amount to-grant-amount)}))))
+    nil))
+
+#_(grant-to-group!
+   (dat/q '[:find ?group-id .
+          :where [_ :group/id ?group-id]]
+        @conn)
+   25)
 
 (comment
   ;; all EAVs

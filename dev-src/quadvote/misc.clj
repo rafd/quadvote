@@ -3,6 +3,7 @@
    [clojure.string]
    [clojure.data.csv]
    [clojure.java.io]
+   [dat.api]
    [tada.events.core]
    [quadvote.cqrs]
    [quadvote.routes]
@@ -15,8 +16,8 @@
    {:name "Raf" :email "rafal.dittwald@gmail.com" :admin? true})
 
   (def admin-id (quadvote.state/email->user-id "admin@example.com"))
-  ;; create users
 
+  ;; create users
   (doseq [[name email] (->> (slurp "/tmp/people.csv")
                             (clojure.string/split-lines)
                             (map #(clojure.string/split % #",")))]
@@ -26,14 +27,14 @@
       :name name
       :email email}))
 
-  ;; grant tokens
-  (let [amount 25]
-    (doseq [user-id (->> @quadvote.state/state
-                         :db/users
-                         keys)]
-      (swap! quadvote.state/state update-in [:db/balances user-id]
-             (fnil + 0) amount)))
+  ;; grant bonus tokens
+  (quadvote.state/grant-to-group!
+   (dat.api/q '[:find ?group-id .
+                :where [_ :group/id ?group-id]]
+              @quadvote.state/conn)
+   25)
 
+  ;; create topics
   (doseq [[title description] (->> (with-open [reader (clojure.java.io/reader "projects.csv")]
                                      (doall
                                       (clojure.data.csv/read-csv reader)))
