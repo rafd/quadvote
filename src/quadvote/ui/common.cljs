@@ -4,6 +4,8 @@
 
 (def purple "#7c3aed")
 
+(def input-tw "p-1 border rounded")
+
 (defn color [x]
   (str "oklch(70% 20%" (hash x) ")"))
 

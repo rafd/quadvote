@@ -55,6 +55,10 @@
 
 ; ---
 
+(defonce group-id (r/atom nil))
+
+; ---
+
 (defn topic->total-voice-amount
   [topic]
   (->> topic

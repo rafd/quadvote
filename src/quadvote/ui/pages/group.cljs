@@ -194,4 +194,6 @@
  {:page/id :page/group
   :page/view #'view
   :page/path "/group/:id"
-  :page/parameters {:id :uuid}})
+  :page/parameters {:id :uuid}
+  :page/on-enter! (fn [[_ {:keys [id]}]]
+                    (reset! state/group-id id))})
