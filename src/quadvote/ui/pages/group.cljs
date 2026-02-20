@@ -155,9 +155,9 @@
            "Burn"])]])]))
 
 (defn view
-  [[_ {:keys [id]}]]
+  [group-id]
   (r/with-let
-   [membership (state/tada-atom! [:api/membership {:group-id id}])
+   [membership (state/tada-atom! [:api/membership {:group-id group-id}])
     user (state/tada-atom! [:api/user {}])
     id->topic (r/reaction
                (let [topics (-> @membership :membership/group :topic/_group)]
@@ -192,7 +192,9 @@
 
 (pages/register-page!
  {:page/id :page/group
-  :page/view #'view
+  :page/view (fn [[_ {:keys [id]}]]
+               ^{:key id}
+               [view id])
   :page/path "/group/:id"
   :page/parameters {:id :uuid}
   :page/on-enter! (fn [[_ {:keys [id]}]]

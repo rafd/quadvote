@@ -35,13 +35,17 @@
                              @state/conn)]
 
     (tada/do! :api/create-group!
-              (assoc {:name "Test"}
+              (assoc {:name "Test Group A"}
                      :user-id admin-user-id))
 
-    (let [group-id (dat/q '[:find ?id .
-                            :where
-                            [_ :group/id ?id]]
-                          @state/conn)]
+    (tada/do! :api/create-group!
+              (assoc {:name "Test Group B"}
+                     :user-id admin-user-id))
+
+    (doseq [group-id (dat/q '[:find [?id ...]
+                              :where
+                              [_ :group/id ?id]]
+                            @state/conn)]
 
       (dotimes [i 10]
         (tada/do! :api/add-user-to-group!

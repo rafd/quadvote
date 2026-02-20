@@ -3,6 +3,7 @@
    [bloom.commons.pages :as pages]
    [bloom.commons.fontawesome :as fa]
    [goog.object :as o]
+   [reagent.core :as r]
    [quadvote.ui.state :as state]
    [quadvote.ui.common :as ui]
    [quadvote.ui.modal :as modal]))
@@ -57,11 +58,29 @@
                                                  :target "_blank"
                                                  :href "https://en.wikipedia.org/wiki/Quadratic_voting"} "quadratic voting"] ")"]])
 
+(defn group-switcher-view
+  [membership]
+  (r/with-let [user (state/tada-atom! [:api/user {}])]
+    (let [groups (->> @user
+                      :membership/_user
+                      (map :membership/group))
+          current-group-id (:group/id (:membership/group @membership))]
+      [:select {:tw (str ui/input-tw " grow bg-transparent text-sm font-bold")
+                :value (str current-group-id)
+                :on-change (fn [e]
+                             (let [selected (.. e -target -value)
+                                   group (->> groups
+                                              (filter #(= (str (:group/id %)) selected))
+                                              first)]
+                               (pages/navigate-to! [:page/group {:id (:group/id group)}])))}
+       (for [{:group/keys [id name]} groups]
+         ^{:key id}
+         [:option {:value (str id)} name])])))
+
 (defn header-view
   [membership]
   [:div.header {:tw "flex justify-between items-center pb-4 gap-3"}
-   [:h1 {:tw "grow"}
-    (:group/name (:membership/group @membership))]
+   [group-switcher-view membership]
    (when (:membership/admin? @membership)
      [:div {:tw "text-xs"}
       [ui/button {:on-click (fn []
