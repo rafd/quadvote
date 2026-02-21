@@ -5,6 +5,8 @@
     [quadvote.state :as state]
     [quadvote.model :as model]))
 
+(defonce t (tada/init :malli))
+
 (defn entity-exists?-condition
   [key value]
   [#(state/entity-exists? key value)
@@ -96,10 +98,10 @@
 
    {:id :api/vote!
     :params {:topic-id uuid?
-             :voice-amount (fn [x]
-                             (and
-                               (int? x)
-                               (<= 0 x 5)))
+             :voice-amount [:fn (fn [x]
+                                  (and
+                                   (int? x)
+                                   (<= 0 x 5)))]
              :user-id uuid?}
     :conditions
     (fn [{:keys [topic-id voice-amount user-id]}]
@@ -300,5 +302,6 @@
                          :claim/membership [:membership/id membership-id]
                          :claim/timestamp (java.util.Date.)}])))}])
 
-(tada/register! (concat queries commands))
+(tada/register! t (concat queries
+                          commands))
 

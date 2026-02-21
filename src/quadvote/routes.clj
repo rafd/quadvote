@@ -2,6 +2,7 @@
   (:require
    [bloom.omni.auth.token :as token]
    [bloom.commons.tada.rpc.server :as tada.rpc]
+   [quadvote.cqrs :as cqrs]
    [quadvote.email :as email]
    [quadvote.state :as state]
    [quadvote.config :as config]))
@@ -42,7 +43,8 @@
 
    [[:post "/api/tada/*"]
     (tada.rpc/make-handler
-      {:extra-params
-       (fn [request]
-         {:user-id (get-in request [:session :user-id])})})]])
+     cqrs/t
+     {:extra-params
+      (fn [request]
+        {:user-id (get-in request [:session :user-id])})})]])
 

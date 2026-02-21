@@ -2,6 +2,7 @@
   (:require
     [bloom.commons.uuid :as uuid]
     [tada.events.core :as tada]
+    [quadvote.cqrs :as cqrs]
     [quadvote.state :as state]
     [quadvote.model :as model]
     [dat.api :as dat]))
@@ -20,6 +21,9 @@
   {:title (str "Foo bar baz " (rand-int 10000))
    :description "Lorep ipsum...\n\n Read more [here](https://example.com)."})
 
+;; only use public interfaces to seed (ie. tada/do!)
+;; except when absolutely necessary
+
 (defn seed! []
   (dat/clear! state/conn)
 
@@ -34,27 +38,31 @@
                                [_ :user/id ?id]]
                              @state/conn)]
 
-    (tada/do! :api/create-group!
+    (tada/do! cqrs/t
+              :api/create-group!
               (assoc {:name "Test Group A"}
-                     :user-id admin-user-id))
+                      :user-id admin-user-id))
 
-    (tada/do! :api/create-group!
+    (tada/do! cqrs/t
+              :api/create-group!
               (assoc {:name "Test Group B"}
-                     :user-id admin-user-id))
+                      :user-id admin-user-id))
 
     (doseq [group-id (dat/q '[:find [?id ...]
                               :where
-                              [_ :group/id ?id]]
+                          [_ :group/id ?id]]
                             @state/conn)]
 
       (dotimes [i 10]
-        (tada/do! :api/add-user-to-group!
+        (tada/do! cqrs/t
+                  :api/add-user-to-group!
                   (assoc (generate-user (str "user-" i))
                          :user-id admin-user-id
                          :group-id group-id)))
 
       (dotimes [_ 10]
-        (tada/do! :api/create-topic!
+        (tada/do! cqrs/t
+                  :api/create-topic!
                   (assoc (generate-topic)
                          :group-id group-id
                          :user-id admin-user-id)))
@@ -83,12 +91,14 @@
                                           (:user/id user)
                                           group-id)]]
            (do
-             (tada/do! :api/claim!
+             (tada/do! cqrs/t
+                       :api/claim!
                        {:membership-id membership-id
                         :user-id (:user/id user)})
 
              (try
-               (tada/do! :api/vote!
+               (tada/do! cqrs/t
+                         :api/vote!
                          {:topic-id (:topic/id topic)
                           :voice-amount (inc (rand-int model/max-voice-amount-per-vote))
                           :user-id (:user/id user)})
@@ -97,7 +107,8 @@
 
         (for [topic topics
               :when (rand-nth [false false false true])]
-          (tada/do! :api/burn-topic!
+          (tada/do! cqrs/t
+                    :api/burn-topic!
                     {:topic-id (:topic/id topic)
                      :message "asdf"
                      :user-id admin-user-id}))))))
