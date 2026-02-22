@@ -40,6 +40,7 @@
          (Period/ofDays 1)))
    (fn [zdt]
      (println "Running grant job...")
-     (grant-to-eligible-groups! zdt))))
+     (grant-to-eligible-groups! zdt)))
+  nil)
 
 #_(schedule-grant-job!)
