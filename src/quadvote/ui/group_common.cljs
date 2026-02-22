@@ -4,8 +4,8 @@
    [quadvote.ui.header :as header]))
 
 (defn page
-  [{:keys [membership]} content]
+  [{:keys [*group]} content]
   [:div {:tw "px-8 p-4 max-w-40rem mx-auto"}
    [modal/modal-view]
-   [header/header-view membership]
+   [header/header-view *group]
    content])

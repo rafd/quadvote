@@ -9,7 +9,7 @@
    [quadvote.ui.modal :as modal]))
 
 (defn new-topic-modal-view
-  [membership]
+  [*group]
   [:form {:tw "space-y-2"
           :on-submit (fn [e]
                        (.preventDefault e)
@@ -19,7 +19,7 @@
                               :description (-> e .-target .-elements (o/get "description") .-value)
                               :group-id @state/group-id}])
                            (.then (fn []
-                                    (state/refresh! membership)
+                                    (state/refresh! *group)
                                     (modal/close!)))))}
    [:h1 {:tw "font-bold"} "Add a Topic"]
    [:label {:tw "block"}
@@ -59,41 +59,41 @@
                                                  :href "https://en.wikipedia.org/wiki/Quadratic_voting"} "quadratic voting"] ")"]])
 
 (defn group-switcher-view
-  [membership]
+  [*group]
   (r/with-let
    [user (state/tada-atom! [:api/user {}])]
    (let [groups (->> @user
                      :membership/_user
                      (map :membership/group))
-         current-group-id (:group/id (:membership/group @membership))]
+         current-group-id (:group/id @*group)]
      [:select {:tw (str ui/input-tw " grow bg-transparent text-sm font-bold")
                :value (str current-group-id)
                :on-change (fn [e]
                             (let [selected (.. e -target -value)
-                                  group (->> groups
-                                             (filter #(= (str (:group/id %)) selected))
-                                             first)]
-                              (pages/navigate-to! [:page/group {:id (:group/id group)}])))}
+                                  selected-group (->> groups
+                                                      (filter #(= (str (:group/id %)) selected))
+                                                      first)]
+                              (pages/navigate-to! [:page/group {:id (:group/id selected-group)}])))}
       (for [{:group/keys [id name]} groups]
         ^{:key id}
         [:option {:value (str id)} name])])))
 
 (defn header-view
-  [membership]
+  [*group]
   [:div.header {:tw "flex justify-between items-center gap-3"}
-   [group-switcher-view membership]
-   (when (or (:membership/admin? @membership)
-             (-> @membership :membership/group :group/open-topics?))
+   [group-switcher-view *group]
+   (when (or (-> @*group :group/membership :membership/admin?)
+             (-> @*group :group/open-topics?))
      [:div {:tw "text-xs"}
       [ui/button {:on-click (fn []
-                              (modal/open! [new-topic-modal-view membership]))}
+                              (modal/open! [new-topic-modal-view *group]))}
        [fa/fa-plus-circle-solid {:tw "w-3 h-3"}]
        "Add a Topic"]])
-   (when (:membership/admin? @membership)
+   (when (-> @*group :group/membership :membership/admin?)
      [ui/button {:on-click (fn []
-                             (pages/navigate-to! [:page/admin {:id (:group/id (:membership/group @membership))}]))}
+                             (pages/navigate-to! [:page/admin {:id (:group/id @*group)}]))}
       [:span {:tw "text-xs"} "Admin"]])
-   (let [amount (:membership/claimable-token-amount @membership)]
+   (let [amount (-> @*group :group/membership :membership/claimable-token-amount)]
      (when (< 0 (or amount 0))
        [:div
         [:span {:tw "text-xs"}
@@ -101,21 +101,21 @@
         [:button {:on-click (fn []
                               (-> (state/tada!
                                    [:api/claim!
-                                    {:membership-id (:membership/id @membership)}])
+                                    {:membership-id (-> @*group :group/membership :membership/id)}])
                                   (.then (fn [_]
-                                           (state/refresh! membership)))))}
+                                           (state/refresh! *group)))))}
          [ui/token-amount-view amount :gain]]]))
    [ui/button {:on-click (fn []
-                           (pages/navigate-to! [:page/group {:id (:group/id (:membership/group @membership))}]))}
+                           (pages/navigate-to! [:page/group {:id (:group/id @*group)}]))}
     [:span {:tw "text-xs"} "Active"]]
    [ui/button {:on-click (fn []
-                           (pages/navigate-to! [:page/log {:id (:group/id (:membership/group @membership))}]))}
+                           (pages/navigate-to! [:page/log {:id (:group/id @*group)}]))}
     [:span {:tw "text-xs"} "Complete"]]
    [ui/button {:on-click (fn [] (modal/open! [info-modal-view]))}
     [fa/fa-question-circle-solid {:tw "w-3 h-3"}]
     [:span {:tw "text-xs"} "WTF?"]]
    [:div.my-balance {:tw "flex items-center gap-1"}
-    [ui/token-amount-view (:membership/balance @membership) nil]]
+    [ui/token-amount-view (-> @*group :group/membership :membership/balance) nil]]
    [ui/button {:on-click (fn []
                            (when (js/confirm "Log out?")
                              (state/ajax!
@@ -125,5 +125,3 @@
                                              (js/window.location.reload))
                                :on-error (fn [])})))}
     [fa/fa-sign-out-alt-solid {:tw "w-3 h-3"}]]])
-
-

@@ -19,7 +19,7 @@
      [:div.bar {:tw "w-3 h-0.75 bg-green-700 rounded"}])])
 
 (defn topic-view
-  [{:keys [membership user]} topic]
+  [{:keys [*group user]} topic]
   (r/with-let
     [show-description? (r/atom false)
      vote! (fn [{:keys [topic-id new-voice-amount]}]
@@ -27,7 +27,7 @@
                                {:topic-id topic-id
                                 :voice-amount new-voice-amount}])
                  (.then (fn []
-                          (state/refresh! membership)))))]
+                          (state/refresh! *group)))))]
     [:div.topic {:tw "bg-white rounded overflow-hidden shadow"}
      [:div.main {:tw "flex justify-between items-center"}
       [:div.title {:tw "p-4 flex flex-wrap justify-between grow gap-2 items-center cursor-pointer group"
@@ -49,7 +49,7 @@
                          (< (:vote/voice-amount vote) model/max-voice-amount-per-vote)
                          (model/can-afford?
                           {:balance
-                           (:membership/balance @membership)
+                           (-> @*group :group/membership :membership/balance)
                            :old-voice-amount
                            (:vote/voice-amount vote)
                            :new-voice-amount
@@ -142,7 +142,7 @@
           (r/unsafe-html (md/md->html
                           (:topic/description topic)))}]
         [:div.actions {:tw "py-4"}
-         (when (:membership/admin? @membership)
+         (when (-> @*group :group/membership :membership/admin?)
            [ui/button {:on-click (fn []
                                    (let [message (js/prompt "Message:")]
                                      (when-not (string/blank? message)
@@ -150,16 +150,16 @@
                                                          {:topic-id (:topic/id topic)
                                                           :message message}])
                                            (.then (fn []
-                                                    (state/refresh! membership)))))))}
+                                                    (state/refresh! *group)))))))}
             "Burn"])]])]))
 
 (defn view
   [group-id]
   (r/with-let
-   [membership (state/tada-atom! [:api/membership {:group-id group-id}])
+   [*group (state/tada-atom! [:api/group {:group-id group-id}])
     user (state/tada-atom! [:api/user {}])
     id->topic (r/reaction
-               (let [topics (-> @membership :membership/group :topic/_group)]
+               (let [topics (-> @*group :topic/_group)]
                  (zipmap (map :topic/id topics)
                          topics)))
     ;; update order of topics with a delay (for a better user experience)
@@ -176,7 +176,7 @@
     initialized? (atom false)
     _ (r/track!
        (fn []
-         (let [topics (-> @membership :membership/group :topic/_group)]
+         (let [topics (-> @*group :topic/_group)]
            (when (seq topics)
              (if @initialized?
                (resort-topics-debounced! topics)
@@ -184,9 +184,9 @@
                  (reset! initialized? true)
                  (resort-topics! topics)))))))]
    [group/page
-    {:membership membership}
+    {:*group *group}
     [:<>
-     (if-let [description (-> @membership :membership/group :group/description)]
+     (if-let [description (-> @*group :group/description)]
        [:div.description
         {:tw "prose text-sm"
          :dangerouslySetInnerHTML
@@ -199,7 +199,7 @@
                          (remove :topic/burn))]
           ^{:key (:topic/id topic)}
           [topic-view
-           {:membership membership
+           {:*group *group
             :user user}
            topic]))]]]))
 

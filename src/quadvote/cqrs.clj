@@ -44,7 +44,7 @@
        @(state/conn)
        user-id))}
 
-   {:id :api/membership
+   {:id :api/group
     :params {:group-id :group/id
              :user-id :user/id}
     :conditions
@@ -54,16 +54,11 @@
        (user-is-member-of-group?-condition user-id group-id)])
     :return
     (fn [{:keys [group-id user-id]}]
-      (dat/q
-       '[:find (pull ?membership [:membership/id
-                                  :membership/admin?
-                                  :membership/balance
-                                  :membership/claimable-token-amount
-                                  {:membership/group
-                                   [:group/id
-                                    :group/name
-                                    :group/description
-                                    :group/balance
+      (let [group (dat/q
+                   '[:find (pull ?group [:group/id
+                                         :group/name
+                                         :group/description
+                                         :group/balance
                                     :group/open-membership?
                                     :group/open-topics?
                                     :group/grant-frequency
@@ -83,19 +78,30 @@
                                        [:user/id
                                         :user/name]}
                                       {:vote/_topic
-                                       [:vote/id
-                                        :vote/voice-amount
-                                        {:vote/user [:user/id
-                                                     :user/name]}]}]}]}]) .
-         :in $ ?group-id ?user-id
-         :where
-         [?group :group/id ?group-id]
+                                            [:vote/id
+                                             :vote/voice-amount
+                                             {:vote/user [:user/id
+                                                          :user/name]}]}]}]) .
+                     :in $ ?group-id
+                     :where
+                     [?group :group/id ?group-id]]
+                   @(state/conn)
+                   group-id)
+            membership (dat/q
+                        '[:find (pull ?membership [:membership/id
+                                                   :membership/admin?
+                                                   :membership/balance
+                                                   :membership/claimable-token-amount]) .
+                          :in $ ?group-id ?user-id
+                          :where
+                          [?group :group/id ?group-id]
          [?user :user/id ?user-id]
          [?membership :membership/group ?group]
          [?membership :membership/user ?user]]
        @(state/conn)
        group-id
-       user-id))}])
+                        user-id)]
+        (assoc group :group/membership membership)))}])
 
 (def commands
   [

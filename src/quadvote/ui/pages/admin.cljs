@@ -47,26 +47,25 @@
        nil)]))
 
 (defn settings-form-view
-  [{:keys [membership]}]
+  [{:keys [*group]}]
   (r/with-let
    [form (r/atom
-          (let [group (:membership/group @membership)]
-            {:name (:group/name group)
-             :description (:group/description group)
-             :open-membership? (:group/open-membership? group)
-             :open-topics? (:group/open-topics? group)
-             :grant-frequency (:group/grant-frequency group)
-             :grant-amount (:group/grant-amount group)}))]
+          {:name (:group/name @*group)
+           :description (:group/description @*group)
+           :open-membership? (:group/open-membership? @*group)
+           :open-topics? (:group/open-topics? @*group)
+           :grant-frequency (:group/grant-frequency @*group)
+           :grant-amount (:group/grant-amount @*group)})]
    [:form
     {:tw "space-y-3"
      :on-submit (fn [e]
                   (.preventDefault e)
                   (-> (state/tada!
                        [:api/update-group!
-                        (merge {:group-id (get-in @membership [:membership/group :group/id])}
+                        (merge {:group-id (:group/id @*group)}
                                @form)])
                       (.then (fn []
-                               (state/refresh! membership)))))}
+                               (state/refresh! *group)))))}
     [:h2 {:tw "font-bold"} "Group Settings"]
     [:label {:tw "block"}
      [:div "Group Name"]
@@ -108,14 +107,14 @@
 (defn view
   [group-id]
   (r/with-let
-   [membership (state/tada-atom! [:api/membership {:group-id group-id}])]
+   [*group (state/tada-atom! [:api/group {:group-id group-id}])]
    [group/page
-    {:membership membership}
+    {:*group *group}
     [:div {:tw "space-y-8"}
-     (when @membership
+     (when @*group
        [:<>
-        #_[invite-form-view {:membership membership}]
-        [settings-form-view {:membership membership}]])]]))
+        #_[invite-form-view {:*group *group}]
+        [settings-form-view {:*group *group}]])]]))
 
 (pages/register-page!
  {:page/id :page/admin

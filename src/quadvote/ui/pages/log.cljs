@@ -16,10 +16,9 @@
         :day "numeric"}))
 
 (defn burns-view
-  [membership]
+  [*group]
   [:div.burns
-   (for [topic (->> @membership
-                    :membership/group
+   (for [topic (->> @*group
                     :topic/_group
                     (filter :topic/burn)
                     (sort-by (fn [t]
@@ -41,10 +40,10 @@
 (defn view
   [[_ {:keys [id]}]]
   (r/with-let
-   [membership (state/tada-atom! [:api/membership {:group-id id}])]
-   [group/page
-    {:membership membership}
-    [burns-view membership]]))
+    [*group (state/tada-atom! [:api/group {:group-id id}])]
+    [group/page
+     {:*group *group}
+     [burns-view *group]]))
 
 (pages/register-page!
  {:page/id :page/log
