@@ -103,10 +103,7 @@
 
    {:id :api/vote!
     :params {:topic-id :topic/id
-             :voice-amount [:fn (fn [x]
-                                  (and
-                                   (int? x)
-                                   (<= 0 x 5)))]
+             :voice-amount :vote/voice-amount
              :user-id :user/id}
     :conditions
     (fn [{:keys [topic-id voice-amount user-id]}]

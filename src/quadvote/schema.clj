@@ -1,10 +1,17 @@
-(ns quadvote.schema)
+(ns quadvote.schema
+  (:require
+   [clojure.string]))
+
+(def NonBlankString
+  [:fn {:error/message {:en "must not be blank"}}
+   #(not (clojure.string/blank? %))])
 
 (def schema
   {:entity/group
    {:group/id {:dat/type :db.type/uuid
                :dat/unique :dat.unique/identity}
-    :group/name {:dat/type :db.type/string}
+    :group/name {:dat/type :db.type/string
+                 :dat/spec NonBlankString}
     :group/description {:dat/type :db.type/string}
     :group/open-membership? {:dat/type :db.type/boolean}
     :group/open-topics? {:dat/type :db.type/boolean}
@@ -19,8 +26,10 @@
    :entity/user
    {:user/id {:dat/type :db.type/uuid
               :dat/unique :dat.unique/identity}
-    :user/name {:dat/type :db.type/string}
-    :user/email {:dat/type :db.type/string}}
+    :user/name {:dat/type :db.type/string
+                :dat/spec NonBlankString}
+    :user/email {:dat/type :db.type/string
+                 :dat/spec NonBlankString}}
 
    :entity/membership
    {:membership/id {:dat/type :db.type/uuid
@@ -47,7 +56,8 @@
    :entity/topic
    {:topic/id {:dat/type :db.type/uuid
                :dat/unique :dat.unique/identity}
-    :topic/title {:dat/type :db.type/string}
+    :topic/title {:dat/type :db.type/string
+                  :dat/spec NonBlankString}
     :topic/description {:dat/type :db.type/string}
     :topic/group {:dat/rel [:dat.rel/one
                             :entity/group
@@ -62,7 +72,10 @@
    :entity/vote
    {:vote/id {:dat/type :db.type/uuid
               :dat/unique :dat.unique/identity}
-    :vote/voice-amount {:dat/type :db.type/long}
+    :vote/voice-amount {:dat/type :db.type/long
+                        :dat/spec [:fn {:error/message {:en "must be between 0 and 5"}}
+                                   (fn [x]
+                                     (<= 0 x 5))]}
     :vote/topic {:dat/rel [:dat.rel/one
                            :entity/topic
                            :topic/id]}
@@ -78,3 +91,5 @@
     :burn/user {:dat/rel [:dat.rel/one
                           :entity/user
                           :user/id]}}})
+
+#_(malli.registry/set-default-registry! (dat.schema/->malli-registry schema))
