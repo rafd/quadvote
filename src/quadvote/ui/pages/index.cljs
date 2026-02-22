@@ -12,12 +12,7 @@
                       :membership/_user
                       (map :membership/group))]
       [:div
-       (for [{:group/keys [id name]} groups]
-         ^{:key id}
-         [:div
-          [:a {:href (pages/path-for [:page/group {:id id}])}
-           name]])
-       (when (= (count groups) 1)
+       (when (seq groups)
          (pages/navigate-to! [:page/group {:id (:group/id (first groups))}]))])))
 
 (pages/register-page!
