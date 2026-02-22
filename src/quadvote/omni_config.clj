@@ -1,22 +1,5 @@
-(ns quadvote.omni-config
-  (:require
-   [quadvote.config :as config]
-   [quadvote.routes :as routes]))
+(ns quadvote.omni-config)
 
+;; this is only to satisfy omni during uberjaring
 (def omni-config
-  {:omni/http-port (config/get :http-port)
-   :omni/title "quadvote"
-   :omni/environment (config/get :environment)
-   :omni/api-routes #'routes/routes
-   :omni/cljs {:main "quadvote.core"}
-   :omni/auth {:cookie {:name "quadvote"
-                        :secret (config/get :omni-secret)
-                        :same-site :strict}
-               :token {:secret (config/get :omni-secret)}}
-   :omni/html-head-includes
-   [[:link
-     {:rel "stylesheet"
-      :href "/css/markdown.css"}]]
-   :omni/css
-   {:tailwind? true
-    :tailwind-opts {:base-css-rules '[girouette.tw.preflight/preflight-v2_0_3]}}})
+  {:omni/environment :prod})

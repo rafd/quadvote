@@ -2,10 +2,9 @@
   (:require
     [tada.events.core :as tada]
     [dat.api :as dat]
+    [sys.api :as sys]
     [quadvote.state :as state]
     [quadvote.model :as model]))
-
-(defonce t (tada/init :malli))
 
 (defn entity-exists?-condition
   [key value]
@@ -42,7 +41,7 @@
          :in $ ?user-id
          :where
          [?user :user/id ?user-id]]
-       @state/conn
+       @(state/conn)
        user-id))}
 
    {:id :api/membership
@@ -94,7 +93,7 @@
          [?user :user/id ?user-id]
          [?membership :membership/group ?group]
          [?membership :membership/user ?user]]
-       @state/conn
+       @(state/conn)
        group-id
        user-id))}])
 
@@ -113,7 +112,7 @@
                               [?t :topic/id ?topic-id]
                               [?t :topic/group ?g]
                               [?g :group/id ?group-id]]
-                            @state/conn
+                            @(state/conn)
                             topic-id)]
         [(entity-exists?-condition :user/id user-id)
          (entity-exists?-condition :topic/id topic-id)
@@ -134,7 +133,7 @@
                                                       [?v :vote/topic ?t]
                                                       [?v :vote/id ?vote-id]
                                                       [?v :vote/voice-amount ?previous-amount]]
-                                                    @state/conn
+                                                    @(state/conn)
                                                     user-id
                                                     topic-id))
             [membership-id balance] (first (dat/q '[:find ?membership-id ?balance
@@ -148,11 +147,11 @@
                                                     [?m :membership/group ?g]
                                                     [?m :membership/id ?membership-id]
                                                     [?m :membership/balance ?balance]]
-                                                  @state/conn
+                                                  @(state/conn)
                                                   user-id
                                                   topic-id))]
         (dat/transact!
-         state/conn
+         (state/conn)
          [(if (= 0 voice-amount)
             [:db/retractEntity [:vote/id vote-id]]
             {:vote/id (or vote-id (dat/uuid))
@@ -174,7 +173,7 @@
     :effect
     (fn [{:keys [name user-id]}]
       (dat/transact!
-        state/conn
+        (state/conn)
         [{:db/id -1
           :group/id (dat/uuid)
           :group/name name
@@ -205,7 +204,7 @@
         :forbidden "User is already a member of this group."]])
     :effect
     (fn [{:keys [name group-id email]}]
-      (dat/transact! state/conn
+      (dat/transact! (state/conn)
                      (if-let [user-id (state/email->user-id email)]
                        [{:membership/id (dat/uuid)
                          :membership/user [:user/id user-id]
@@ -237,7 +236,7 @@
         :forbidden "Topic creation is restricted to admins."]])
     :effect
     (fn [{:keys [title description group-id user-id]}]
-      (dat/transact! state/conn
+      (dat/transact! (state/conn)
                      [{:topic/id (dat/uuid)
                        :topic/group [:group/id group-id]
                        :topic/user [:user/id user-id]
@@ -259,13 +258,13 @@
                                   [?t :topic/id ?topic-id]
                                   [?t :topic/group ?g]
                                   [?g :group/id ?group-id]]
-                                @state/conn
+                                @(state/conn)
                                 topic-id)]
             (user-is-admin-of-group?-condition user-id group-id)))
         :forbidden "User is not an admin of the group that owns this topic."]])
     :effect
     (fn [{:keys [user-id topic-id message]}]
-      (dat/transact! state/conn
+      (dat/transact! (state/conn)
                      [{:topic/id topic-id
                        :topic/burn {:burn/id (dat/uuid)
                                     :burn/message message
@@ -289,7 +288,7 @@
        (user-is-admin-of-group?-condition user-id group-id)])
     :effect
     (fn [{:keys [group-id name description open-membership? open-topics? grant-frequency grant-amount]}]
-      (dat/transact! state/conn
+      (dat/transact! (state/conn)
                      [(->> {:group/id group-id
                             :group/name name
                             :group/description description
@@ -313,7 +312,7 @@
                            [?u :user/id ?user-id]
                            [?m :membership/id ?membership-id]
                            [?m :membership/user ?u]]
-                         @state/conn
+                         @(state/conn)
                          user-id
                          membership-id))
         :forbidden "This membership does not belong to this user"]])
@@ -327,9 +326,9 @@
                      [?m :membership/id ?membership-id]
                      [?m :membership/balance ?balance]
                      [?m :membership/claimable-token-amount ?claimable]]
-                   @state/conn
+                   @(state/conn)
                    membership-id)]
-        (dat/transact! state/conn
+        (dat/transact! (state/conn)
                        [{:membership/id membership-id
                          :membership/claimable-token-amount 0
                          :membership/balance (+ balance
@@ -338,6 +337,25 @@
                          :claim/membership [:membership/id membership-id]
                          :claim/timestamp (java.util.Date.)}])))}])
 
-(tada/register! t (concat queries
-                          commands))
 
+(def component
+  {:sys.component/id :tada
+   :sys.component/expects #{:conn}
+   :sys.component/provides #{:tada}
+   :sys.component/start (fn [_]
+                          (let [t
+                                (tada/init :malli)]
+
+                            (tada/register! t
+                                            (concat queries
+                                                    commands))
+                            {:tada t}))})
+
+(defn registry
+  []
+  (sys/get :system :tada))
+
+(when-let [t (sys/get :system :tada)]
+  (tada/register! t
+                  (concat queries
+                          commands)))

@@ -3,6 +3,7 @@
                  [org.clojure/clojurescript "1.12.134" :exclusions [com.fasterxml.jackson.core/jackson-core]]
                  [io.bloomventures/omni "0.35.0"]
                  [io.bloomventures/commons "0.17.1"]
+                 [com.github.rafd/sys "0.3.1"]
 
                  ;; [com.hyperfiddle/rcf "20220926-202227"] from commons
 

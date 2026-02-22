@@ -1,18 +1,32 @@
 (ns quadvote.core
   (:gen-class)
   (:require
-   [bloom.omni.core :as omni]
-   [quadvote.cqrs] ;; to register tada events
+   [sys.api :as sys]
+   ;; components
+   [quadvote.omni :as omni]
+   [quadvote.config :as config]
    [quadvote.jobs :as jobs]
-   [quadvote.omni-config :refer [omni-config]]))
+   [quadvote.routes :as routes]
+   [quadvote.cqrs :as cqrs]
+   [quadvote.state :as state]))
+
+(sys/set! :system
+          [config/component
+           state/component
+           omni/component
+           routes/component
+           cqrs/component
+           jobs/component])
 
 (defn start! []
-  (omni/start! omni/system omni-config)
-  (jobs/schedule-grant-job!))
+  (sys/start! :system))
 
 (defn stop! []
-  (omni/stop!))
+  (sys/stop! :system))
 
 (defn -main
   [& _]
   (start!))
+
+#_(start!)
+

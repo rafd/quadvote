@@ -21,7 +21,7 @@
                 [?g :group/id ?group-id]
                 [?g :group/grant-frequency ?frequency]
                 [?g :group/grant-amount ?amount]]
-              @state/conn)
+              @(state/conn))
        (filter (fn [[_ frequency _]]
                  (grant-day? frequency zdt)))))
 
@@ -32,7 +32,7 @@
   (doseq [[group-id _ amount] (to-grant zdt)]
     (state/grant-to-group! group-id amount)))
 
-(defn schedule-grant-job! []
+(defn start-grant-job! []
   (chime/chime-at
    (->> (chime/periodic-seq
          (.adjustInto (LocalTime/of 0 0)
@@ -40,7 +40,15 @@
          (Period/ofDays 1)))
    (fn [zdt]
      (println "Running grant job...")
-     (grant-to-eligible-groups! zdt)))
-  nil)
+     (grant-to-eligible-groups! zdt))))
 
-#_(schedule-grant-job!)
+#_(start-grant-job!)
+
+(def component
+  {:sys.component/id :jobs
+   :sys.component/expects #{:conn}
+   :sys.component/provides #{:grant-job}
+   :sys.component/start (fn [_]
+                          {:grant-job (start-grant-job!)})
+   :sys.component/stop (fn [{:keys [grant-job]}]
+                         (.close grant-job))})

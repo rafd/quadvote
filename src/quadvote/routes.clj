@@ -2,10 +2,11 @@
   (:require
    [bloom.omni.auth.token :as token]
    [bloom.commons.tada.rpc.server :as tada.rpc]
+   [sys.api :as sys]
    [quadvote.cqrs :as cqrs]
+   [quadvote.config :as config]
    [quadvote.email :as email]
-   [quadvote.state :as state]
-   [quadvote.config :as config]))
+   [quadvote.state :as state]))
 
 (defn wrap-login
   [{:keys [url user-id]}]
@@ -16,7 +17,8 @@
         user-id
         (config/get :omni-secret))))
 
-(def routes
+(defn r
+  [cqrs-registry]
   [[[:post "/api/auth"]
     (fn [request]
       (let [email (get-in request [:body-params :email])]
@@ -43,8 +45,19 @@
 
    [[:post "/api/tada/*"]
     (tada.rpc/make-handler
-     cqrs/t
+     cqrs-registry
+     ;; sys doesn't make context available via sys/get until after the system has fully started
+     #_(cqrs/registry)
      {:extra-params
       (fn [request]
         {:user-id (get-in request [:session :user-id])})})]])
 
+(def component
+  {:sys.component/id :routes
+   :sys.component/expects #{:tada}
+   :sys.component/provides #{:routes}
+   :sys.component/start (fn [{:keys [tada]}]
+                          {:routes (r tada)})})
+
+(defn routes []
+  (sys/get :system :routes))

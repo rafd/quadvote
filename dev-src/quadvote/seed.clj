@@ -1,11 +1,12 @@
 (ns quadvote.seed
   (:require
     [bloom.commons.uuid :as uuid]
+    [dat.api :as dat]
     [tada.events.core :as tada]
+    [sys.api :as sys]
     [quadvote.cqrs :as cqrs]
     [quadvote.state :as state]
-    [quadvote.model :as model]
-    [dat.api :as dat]))
+    [quadvote.model :as model]))
 
 (defn uuid [x]
   (uuid/from-email (str x)))
@@ -23,11 +24,14 @@
 ;; only use public interfaces to seed (ie. tada/do!)
 ;; except when absolutely necessary
 
+(defn tada-do! [event-id args]
+  (tada/do! (cqrs/registry) event-id args))
+
 (defn seed! []
-  (dat/clear! state/conn)
+  (dat/clear! (state/conn))
 
   (dat/transact!
-   state/conn
+   (state/conn)
    [{:user/id (uuid ::admin)
      :user/name "Admin"
      :user/email "admin@example.com"}])
@@ -35,24 +39,22 @@
   (let [admin-user-id (dat/q '[:find ?id .
                                :where
                                [_ :user/id ?id]]
-                             @state/conn)]
+                             @(state/conn))]
 
-    (tada/do! cqrs/t
-              :api/create-group!
-              (assoc {:name "Test Group A"}
-                      :user-id admin-user-id))
+    (tada-do! :api/create-group!
+              {:name "Test Group A"
+               :user-id admin-user-id})
 
-    (tada/do! cqrs/t
-              :api/create-group!
-              (assoc {:name "Test Group B"}
-                      :user-id admin-user-id))
+    (tada-do! :api/create-group!
+              {:name "Test Group B"
+               :user-id admin-user-id})
 
     (doseq [[group-id
              {:keys [open-membership? open-topics? grant-frequency grant-amount description]}]
             (->> (dat/q '[:find [?id ...]
                           :where
                           [_ :group/id ?id]]
-                        @state/conn)
+                        @(state/conn))
                  (map-indexed vector)
                  (map (fn [[index group-id]]
                         [group-id
@@ -67,7 +69,7 @@
                                 :grant-frequency :grant-frequency/weekly
                                 :grant-amount 10}] index)])))]
 
-      (tada/do! cqrs/t :api/update-group!
+      (tada-do! :api/update-group!
                 {:group-id group-id
                  :user-id admin-user-id
                  :open-membership? open-membership?
@@ -77,15 +79,13 @@
                  :grant-amount grant-amount})
 
       (dotimes [i 10]
-        (tada/do! cqrs/t
-                  :api/add-user-to-group!
+        (tada-do! :api/add-user-to-group!
                   (assoc (generate-user (str "user-" i))
                          :user-id admin-user-id
                          :group-id group-id)))
 
       (dotimes [_ 10]
-        (tada/do! cqrs/t
-                  :api/create-topic!
+        (tada-do! :api/create-topic!
                   (assoc (generate-topic)
                          :group-id group-id
                          :user-id admin-user-id)))
@@ -93,11 +93,11 @@
       (let [users (dat/q '[:find [(pull ?e [*]) ...]
                            :where
                            [?e :user/id _]]
-                         @state/conn)
+                         @(state/conn))
             topics (dat/q '[:find [(pull ?e [*]) ...]
                             :where
                             [?e :topic/id _]]
-                          @state/conn)]
+                          @(state/conn))]
         (doall
          (for [topic topics
                user users
@@ -110,18 +110,16 @@
                                             [?m :membership/user ?u]
                                             [?m :membership/group ?g]
                                             [?m :membership/id ?id]]
-                                          @state/conn
+                                          @(state/conn)
                                           (:user/id user)
                                           group-id)]]
            (do
-             (tada/do! cqrs/t
-                       :api/claim!
+             (tada-do! :api/claim!
                        {:membership-id membership-id
                         :user-id (:user/id user)})
 
              (try
-               (tada/do! cqrs/t
-                         :api/vote!
+               (tada-do! :api/vote!
                          {:topic-id (:topic/id topic)
                           :voice-amount (inc (rand-int model/max-voice-amount-per-vote))
                           :user-id (:user/id user)})
@@ -130,8 +128,7 @@
 
         (for [topic topics
               :when (rand-nth [false false false true])]
-          (tada/do! cqrs/t
-                    :api/burn-topic!
+          (tada-do! :api/burn-topic!
                     {:topic-id (:topic/id topic)
                      :message "asdf"
                      :user-id admin-user-id}))))))

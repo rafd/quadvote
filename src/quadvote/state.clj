@@ -1,11 +1,20 @@
 (ns quadvote.state
   (:require
    [dat.api :as dat]
+   [sys.api :as sys]
    [quadvote.model :as model]
-   [quadvote.config :as config]
    [quadvote.schema :as schema]))
 
-(defonce conn (dat/init! :dat.db/datascript schema/schema {:file-path (config/get :db-path)}))
+(def component
+  {:sys.component/id :db
+   :sys.component/expects #{:db-path}
+   :sys.component/provides #{:conn}
+   :sys.component/start (fn [{:keys [db-path]}]
+                          {:conn (dat/init! :dat.db/datascript schema/schema {:file-path db-path})})
+   :sys.component/stop (fn [_] nil)})
+
+(defn conn []
+  (sys/get :system :conn))
 
 (defn entity-exists?
   [k v]
@@ -13,7 +22,7 @@
                     :in $ ?k ?v
                     :where
                     [?e ?k ?v]]
-                  @conn k v)))
+                  @(conn) k v)))
 
 (defn eav
   [ident k]
@@ -22,9 +31,9 @@
            :where
            [?e ?id-k ?id-v]
            [?e ?k ?v]]
-           @conn
-           ident
-           k))
+         @(conn)
+         ident
+         k))
 
 (defn user-can-afford?
   [{:keys [user-id group-id topic-id voice-amount]}]
@@ -39,7 +48,7 @@
        [?m :membership/user ?u]
        [?m :membership/group ?g]
        [?m :membership/balance ?balance]]
-     @conn
+     @(conn)
      user-id
      group-id)
     :old-voice-amount
@@ -52,7 +61,7 @@
            [?v :vote/user ?u]
            [?v :vote/topic ?t]
            [?v :vote/voice-amount ?voice-amount]]
-         @conn
+         @(conn)
          user-id
          topic-id)
         0)
@@ -69,7 +78,7 @@
                     [?e :membership/user ?u]
                     [?e :membership/group ?g]
                     [?e :membership/admin? true]]
-                  @conn
+                  @(conn)
                   user-id
                   group-id)))
 
@@ -82,7 +91,7 @@
                     [?g :group/id ?group-id]
                     [?e :membership/user ?u]
                     [?e :membership/group ?g]]
-                  @conn
+                  @(conn)
                   user-id
                   group-id)))
 
@@ -94,7 +103,7 @@
                     [?t :topic/id ?topic-id]
                     [?g :group/id ?group-id]
                     [?t :topic/group ?g]]
-                  @conn
+                  @(conn)
                   topic-id
                   group-id)))
 
@@ -105,7 +114,7 @@
            :where
            [?e :user/email ?email]
            [?e :user/id ?id]]
-         @conn
+         @(conn)
          email))
 
 (defn grant-to-group!
@@ -118,10 +127,10 @@
                                  [?m :membership/group ?g]
                                  [?m :membership/id ?membership-id]
                                  [?m :membership/claimable-token-amount ?amount]]
-                               @conn
+                               @(conn)
                                group-id)]
     (dat/transact!
-     conn
+     (conn)
      (->> ids-and-amounts
           (map (fn [[membership-id amount]]
                  {:membership/id membership-id
@@ -131,12 +140,12 @@
 #_(grant-to-group!
    (dat/q '[:find ?group-id .
             :where [_ :group/id ?group-id]]
-          @conn)
+          @(conn))
    25)
 
 (comment
   ;; all EAVs
   (dat/q '[:find ?e ?a ?v
-          :where
-          [?e ?a ?v]]
-        @conn))
+           :where
+           [?e ?a ?v]]
+         @(conn)))
