@@ -1,6 +1,7 @@
 (ns dat.schema
   (:require
-   [malli.core :as m]))
+   [malli.core :as m]
+   [malli.registry :as mr]))
 
 ;; https://docs.datomic.com/schema/schema-reference.html
 ;; https://github.com/metosin/malli?tab=readme-ov-file#built-in-schemas
@@ -18,6 +19,33 @@
   (->> m
        (filter val)
        (into {})))
+
+(defn ->malli-registry
+  [schema]
+  (-> (merge (mr/schemas m/default-registry)
+             {:neg-int (m/-simple-schema {:type :neg-int :pred neg-int?})
+              :whole-int (m/-simple-schema {:type :whole-int :pred #(or (zero? %)
+                                                                        (pos-int? %))})
+              :pos-int (m/-simple-schema {:type :pos-int :pred pos-int?})}
+             ;; entities
+             (->> schema
+                  (map (fn [[k vs]]
+                         [k (into [:map]
+                                  (->> vs
+                                       (map (fn [[k v]]
+                                              ;; TODO rel types
+                                              [k (datalog-type->malli-type (:dat/type v))]))
+                                       (into {})
+                                       remove-nil-vals))]))
+                  (into {}))
+             ;; attrs
+             (->> schema
+                  (mapcat val)
+                  (map (fn [[k v]]
+                         ;; TODO rel-types
+                         [k (datalog-type->malli-type (:dat/type v))]))
+                  (into {})
+                  remove-nil-vals))))
 
 (def Schema
   [:map-of
