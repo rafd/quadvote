@@ -83,7 +83,9 @@
     ::conn
     (if (and (:file-path db-opts)
              (.exists (io/file (:file-path db-opts))))
-      (d/restore-conn (d/file-storage (:file-path db-opts)))
+      (let [c (d/restore-conn (d/file-storage (:file-path db-opts)))]
+        (datascript.core/reset-schema! c (->db-schema db-type schema))
+        c)
       (d/create-conn (->db-schema db-type schema)
                      {:storage (d/file-storage (:file-path db-opts))}))}))
 
