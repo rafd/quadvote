@@ -178,16 +178,22 @@
          (resort-topics-debounced! (-> @membership :membership/group :topic/_group))))]
    [group/page
     {:membership membership}
-    [:div.topics {:tw "space-y-2"}
-     (let [->topic @id->topic]
-       (for [topic (->> @sorted-topic-ids
-                        (map ->topic)
-                        (remove :topic/burn))]
-         ^{:key (:topic/id topic)}
-         [topic-view
-          {:membership membership
-           :user user}
-          topic]))]]))
+    [:<>
+     (when-let [description (-> @membership :membership/group :group/description)]
+       [:div.description
+        {:tw "prose text-sm"
+         :dangerouslySetInnerHTML
+         (r/unsafe-html (md/md->html description))}])
+     [:div.topics {:tw "space-y-2"}
+      (let [->topic @id->topic]
+        (for [topic (->> @sorted-topic-ids
+                         (map ->topic)
+                         (remove :topic/burn))]
+          ^{:key (:topic/id topic)}
+          [topic-view
+           {:membership membership
+            :user user}
+           topic]))]]]))
 
 (pages/register-page!
  {:page/id :page/group

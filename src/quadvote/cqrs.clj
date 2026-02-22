@@ -63,6 +63,7 @@
                                   {:membership/group
                                    [:group/id
                                     :group/name
+                                    :group/description
                                     :group/balance
                                     :group/open-membership?
                                     :group/open-topics?
@@ -180,6 +181,7 @@
         [{:db/id -1
           :group/id (dat/uuid)
           :group/name name
+          :group/description ""
           :group/open-membership? false
           :group/open-topics? false}
          {:membership/id (dat/uuid)
@@ -278,6 +280,7 @@
              [:user-id :uuid]
              [:group-id :uuid]
              [:name {:optional true} :string]
+             [:description {:optional true} :string]
              [:open-membership? {:optional true} :boolean]
              [:open-topics? {:optional true} :boolean]
              [:grant-frequency {:optional true} :keyword]
@@ -288,10 +291,11 @@
        (entity-exists?-condition :group/id group-id)
        (user-is-admin-of-group?-condition user-id group-id)])
     :effect
-    (fn [{:keys [group-id name open-membership? open-topics? grant-frequency grant-amount]}]
+    (fn [{:keys [group-id name description open-membership? open-topics? grant-frequency grant-amount]}]
       (dat/transact! state/conn
                      [(->> {:group/id group-id
                             :group/name name
+                            :group/description description
                             :group/open-membership? open-membership?
                             :group/open-topics? open-topics?
                             :group/grant-frequency grant-frequency

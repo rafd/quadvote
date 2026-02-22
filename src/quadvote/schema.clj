@@ -5,6 +5,7 @@
    {:group/id {:dat/spec :uuid
                :dat/unique :dat.unique/identity}
     :group/name {:dat/spec :string}
+    :group/description {:dat/spec :string}
     :group/open-membership? {:dat/spec :boolean}
     :group/open-topics? {:dat/spec :boolean}
     :group/grant-frequency {:dat/spec :keyword

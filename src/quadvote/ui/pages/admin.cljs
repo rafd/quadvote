@@ -52,6 +52,7 @@
    [form (r/atom
           (let [group (:membership/group @membership)]
             {:name (:group/name group)
+             :description (:group/description group)
              :open-membership? (:group/open-membership? group)
              :open-topics? (:group/open-topics? group)
              :grant-frequency (:group/grant-frequency group)
@@ -73,6 +74,11 @@
               :tw ui/input-tw
               :value (:name @form)
               :on-change #(swap! form assoc :name (-> % .-target .-value))}]]
+    [:label {:tw "block"}
+     [:div "Description"]
+     [:textarea {:tw ui/input-tw
+                 :value (:description @form)
+                 :on-change #(swap! form assoc :description (-> % .-target .-value))}]]
     [form/radio-list
      {:legend "Membership"
       :options [[false "Private"] [true "Open"]]

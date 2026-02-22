@@ -79,7 +79,7 @@
 
 (defn header-view
   [membership]
-  [:div.header {:tw "flex justify-between items-center pb-4 gap-3"}
+  [:div.header {:tw "flex justify-between items-center gap-3"}
    [group-switcher-view membership]
    (when (or (:membership/admin? @membership)
              (-> @membership :membership/group :group/open-topics?))

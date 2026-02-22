@@ -49,7 +49,7 @@
                       :user-id admin-user-id))
 
     (doseq [[group-id
-             {:keys [open-membership? open-topics? grant-frequency grant-amount]}]
+             {:keys [open-membership? open-topics? grant-frequency grant-amount description]}]
             (->> (dat/q '[:find [?id ...]
                           :where
                           [_ :group/id ?id]]
@@ -59,10 +59,12 @@
                         [group-id
                          (get [{:open-membership? false
                                 :open-topics? false
+                                :description "Lorem ipsum..."
                                 :grant-frequency :grant-frequency/monthly
                                 :grant-amount 25}
                                {:open-membership? true
                                 :open-topics? true
+                                :description "Dolor sit amet..."
                                 :grant-frequency :grant-frequency/weekly
                                 :grant-amount 10}] index)])))]
 
@@ -71,6 +73,7 @@
                  :user-id admin-user-id
                  :open-membership? open-membership?
                  :open-topics? open-topics?
+                 :description description
                  :grant-frequency grant-frequency
                  :grant-amount grant-amount})
 
