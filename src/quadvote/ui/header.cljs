@@ -40,17 +40,17 @@
 (defn info-modal-view []
   [:div {:tw "prose"}
    [:p "Vote on which projects Raf should spend more time on."]
-   [:p ]
+   [:p]
    [:p "You have tokens to spend across projects."]
    [:p "You can vote multiple times per project, but concentrating votes is more expensive:"]
-  [:table
-   [:tbody
-    [:tr [:th "Tokens =>"] [:th "Votes"]]
-    [:tr [:td "1"] [:td "1"]]
-    [:tr [:td "4"] [:td "2"]]
-    [:tr [:td "9"] [:td "3"]]
-    [:tr [:td "16"] [:td "4"]]
-    [:tr [:td "25"] [:td "5"]]]]
+   [:table
+    [:tbody
+     [:tr [:th "Tokens =>"] [:th "Votes"]]
+     [:tr [:td "1"] [:td "1"]]
+     [:tr [:td "4"] [:td "2"]]
+     [:tr [:td "9"] [:td "3"]]
+     [:tr [:td "16"] [:td "4"]]
+     [:tr [:td "25"] [:td "5"]]]]
    [:p "You can adjust your votes any time."]
    [:p "When Raf spends a day on a project, tokens spent on that project will be consumed."]
    [:p "New tokens can be claimed by logging in once a month."]
@@ -60,22 +60,23 @@
 
 (defn group-switcher-view
   [membership]
-  (r/with-let [user (state/tada-atom! [:api/user {}])]
-    (let [groups (->> @user
-                      :membership/_user
-                      (map :membership/group))
-          current-group-id (:group/id (:membership/group @membership))]
-      [:select {:tw (str ui/input-tw " grow bg-transparent text-sm font-bold")
-                :value (str current-group-id)
-                :on-change (fn [e]
-                             (let [selected (.. e -target -value)
-                                   group (->> groups
-                                              (filter #(= (str (:group/id %)) selected))
-                                              first)]
-                               (pages/navigate-to! [:page/group {:id (:group/id group)}])))}
-       (for [{:group/keys [id name]} groups]
-         ^{:key id}
-         [:option {:value (str id)} name])])))
+  (r/with-let
+   [user (state/tada-atom! [:api/user {}])]
+   (let [groups (->> @user
+                     :membership/_user
+                     (map :membership/group))
+         current-group-id (:group/id (:membership/group @membership))]
+     [:select {:tw (str ui/input-tw " grow bg-transparent text-sm font-bold")
+               :value (str current-group-id)
+               :on-change (fn [e]
+                            (let [selected (.. e -target -value)
+                                  group (->> groups
+                                             (filter #(= (str (:group/id %)) selected))
+                                             first)]
+                              (pages/navigate-to! [:page/group {:id (:group/id group)}])))}
+      (for [{:group/keys [id name]} groups]
+        ^{:key id}
+        [:option {:value (str id)} name])])))
 
 (defn header-view
   [membership]
