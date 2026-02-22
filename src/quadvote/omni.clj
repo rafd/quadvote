@@ -11,8 +11,7 @@
                             :routes}
    :sys.component/start
    (fn [{:keys [http-port environment routes omni-secret]}]
-     (omni/start! omni/system
-                  {:omni/http-port http-port
+     (omni/start! {:omni/http-port http-port
                    :omni/title "quadvote"
                    :omni/environment environment
                    :omni/api-routes routes
