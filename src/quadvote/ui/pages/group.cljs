@@ -139,9 +139,8 @@
        [:div.description
         {:tw "whitespace-pre-wrap text-xs prose grow"
          :dangerouslySetInnerHTML
-         {:__html
-          (md/md->html
-           (:topic/description topic))}}]
+         (r/unsafe-html (md/md->html
+                         (:topic/description topic)))}]
        [:div.actions {:tw "py-4"}
         (when (:membership/admin? @membership)
           [ui/button {:on-click (fn []
