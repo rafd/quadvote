@@ -39,6 +39,12 @@
        (apply concat)
        (into {})))
 
+(defn remove-nils
+  [m]
+  (->> m
+       (filter val)
+       (into {})))
+
 (defn ->db-schema
   [db-type schema]
   {:pre [(m/validate [:enum
@@ -50,21 +56,22 @@
        by-key
        (map (fn [[k o]]
               [k
-               {:db/unique (case (:dat/unique o)
-                             :dat.unique/identity :db.unique/identity
-                             nil)
-                :db/valueType (or (when (#{:dat.db/datalevin} db-type)
-                                    (malli-type->datalog-type (:dat/spec o)))
-                                  (when (:dat/rel o)
-                                    :db.type/ref))
-                :db/cardinality (if-let [[cardinality _ _] (:dat/rel o)]
-                                  (case cardinality
-                                    :dat.rel/one
-                                    :db.cardinality/one
-                                    :dat.rel/many
-                                    :db.cardinality/many
-                                    nil)
-                                  :db.cardinality/one)}]))
+               (-> {:db/unique (case (:dat/unique o)
+                                 :dat.unique/identity :db.unique/identity
+                                 nil)
+                    :db/valueType (or (when (#{:dat.db/datalevin} db-type)
+                                        (malli-type->datalog-type (:dat/spec o)))
+                                      (when (:dat/rel o)
+                                        :db.type/ref))
+                    :db/cardinality (if-let [[cardinality _ _] (:dat/rel o)]
+                                      (case cardinality
+                                        :dat.rel/one
+                                        :db.cardinality/one
+                                        :dat.rel/many
+                                        :db.cardinality/many
+                                        nil)
+                                      :db.cardinality/one)}
+                   remove-nils)]))
        (into {})))
 
 (defn init!
