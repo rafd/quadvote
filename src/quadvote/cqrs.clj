@@ -29,7 +29,7 @@
 
 (def queries
   [{:id :api/user
-    :params {:user-id uuid?}
+    :params {:user-id :user/id}
     :return
     (fn [{:keys [user-id]}]
       (dat/q
@@ -46,8 +46,8 @@
        user-id))}
 
    {:id :api/membership
-    :params {:group-id uuid?
-             :user-id uuid?}
+    :params {:group-id :group/id
+             :user-id :user/id}
     :conditions
     (fn [{:keys [user-id group-id]}]
       [(entity-exists?-condition :user/id user-id)
@@ -102,12 +102,12 @@
   [
 
    {:id :api/vote!
-    :params {:topic-id uuid?
+    :params {:topic-id :topic/id
              :voice-amount [:fn (fn [x]
                                   (and
                                    (int? x)
                                    (<= 0 x 5)))]
-             :user-id uuid?}
+             :user-id :user/id}
     :conditions
     (fn [{:keys [topic-id voice-amount user-id]}]
       (let [group-id (dat/q '[:find ?group-id .
@@ -169,8 +169,8 @@
                                  (- balance delta))}])))}
 
    {:id :api/create-group!
-    :params {:name string?
-             :user-id uuid?}
+    :params {:name :group/name
+             :user-id :user/id}
     :conditions
     (fn [{:keys [user-id]}]
       [(entity-exists?-condition :user/id user-id)])
@@ -194,10 +194,10 @@
    ;; admin-only
 
    {:id :api/add-user-to-group!
-    :params {:name string?
-             :email string?
-             :user-id uuid?
-             :group-id uuid?}
+    :params {:name :user/name
+             :email :user/email
+             :user-id :user/id
+             :group-id :group/id}
     :conditions
     (fn [{:keys [user-id group-id email]}]
       [(entity-exists?-condition :user/id user-id)
@@ -226,10 +226,10 @@
                          :membership/group [:group/id group-id]}])))}
 
    {:id :api/create-topic!
-    :params {:title string?
-             :description string?
-             :group-id uuid?
-             :user-id uuid?}
+    :params {:title :topic/title
+             :description :topic/description
+             :group-id :group/id
+             :user-id :user/id}
     :conditions
     (fn [{:keys [user-id group-id]}]
       [(entity-exists?-condition :user/id user-id)
@@ -248,9 +248,9 @@
                        :topic/description description}]))}
 
    {:id :api/burn-topic!
-    :params {:topic-id uuid?
-             :message string?
-             :user-id uuid?}
+    :params {:topic-id :topic/id
+             :message :burn/message
+             :user-id :user/id}
     :conditions
     (fn [{:keys [user-id topic-id]}]
       [(entity-exists?-condition :user/id user-id)
@@ -277,14 +277,14 @@
 
    {:id :api/update-group!
     :params [:map
-             [:user-id :uuid]
-             [:group-id :uuid]
-             [:name {:optional true} :string]
-             [:description {:optional true} :string]
-             [:open-membership? {:optional true} :boolean]
-             [:open-topics? {:optional true} :boolean]
-             [:grant-frequency {:optional true} :keyword]
-             [:grant-amount {:optional true} :int]]
+             [:user-id :user/id]
+             [:group-id :group/id]
+             [:name {:optional true} :group/name]
+             [:description {:optional true} :group/description]
+             [:open-membership? {:optional true} :group/open-membership?]
+             [:open-topics? {:optional true} :group/open-topics?]
+             [:grant-frequency {:optional true} :group/grant-frequency]
+             [:grant-amount {:optional true} :group/grant-amount]]
     :conditions
     (fn [{:keys [user-id group-id]}]
       [(entity-exists?-condition :user/id user-id)
@@ -304,8 +304,8 @@
                            (into {}))]))}
 
    {:id :api/claim!
-    :params {:membership-id uuid?
-             :user-id uuid?}
+    :params {:membership-id :membership/id
+             :user-id :user/id}
     :conditions
     (fn [{:keys [membership-id user-id]}]
       [(entity-exists?-condition :user/id user-id)
