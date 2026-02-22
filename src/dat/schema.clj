@@ -20,6 +20,13 @@
        (filter val)
        (into {})))
 
+(defn ->malli-spec
+  [{:dat/keys [type spec]}]
+  (let [base-type (datalog-type->malli-type type)]
+    (if spec
+      [:and base-type spec]
+      base-type)))
+
 (defn ->malli-registry
   [schema]
   (-> (merge (mr/schemas m/default-registry)
@@ -34,7 +41,7 @@
                                   (->> vs
                                        (map (fn [[k v]]
                                               ;; TODO rel types
-                                              [k (datalog-type->malli-type (:dat/type v))]))
+                                              [k (->malli-spec v)]))
                                        (into {})
                                        remove-nil-vals))]))
                   (into {}))
@@ -43,7 +50,7 @@
                   (mapcat val)
                   (map (fn [[k v]]
                          ;; TODO rel-types
-                         [k (datalog-type->malli-type (:dat/type v))]))
+                         [k (->malli-spec v)]))
                   (into {})
                   remove-nil-vals))))
 
