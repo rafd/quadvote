@@ -4,14 +4,20 @@
 
 ;; https://docs.datomic.com/schema/schema-reference.html
 ;; https://github.com/metosin/malli?tab=readme-ov-file#built-in-schemas
-(def malli-type->datalog-type
-  {:uuid :db.type/uuid
-   :int :db.type/long
-   :string :db.type/string
-   :float :db.type/float
-   :keyword :db.type/keyword
-   :boolean :db.type/boolean
-   :inst :db.type/instant})
+(def datalog-type->malli-type
+  {:db.type/uuid :uuid
+   :db.type/long :int
+   :db.type/string :string
+   :db.type/float :float
+   :db.type/keyword :keyword
+   :db.type/boolean :boolean
+   :db.type/instant :inst})
+
+(defn remove-nil-vals
+  [m]
+  (->> m
+       (filter val)
+       (into {})))
 
 (def Schema
   [:map-of
@@ -19,9 +25,9 @@
    [:map-of
     :keyword
     [:map
-     [:dat/spec
+     [:dat/type
       {:optional true}
-      (into [:enum] (keys malli-type->datalog-type))]
+      (into [:enum] (keys datalog-type->malli-type))]
      [:dat/unique {:optional true}
       [:enum :dat.unique/identity]]
      [:dat/rel {:optional true}
@@ -34,12 +40,6 @@
   (->> schema
        vals
        (apply concat)
-       (into {})))
-
-(defn remove-nils
-  [m]
-  (->> m
-       (filter val)
        (into {})))
 
 (defn ->db-schema
@@ -57,7 +57,7 @@
                                  :dat.unique/identity :db.unique/identity
                                  nil)
                     :db/valueType (or (when (#{:dat.db/datalevin} db-type)
-                                        (malli-type->datalog-type (:dat/spec o)))
+                                        (:dat/type o))
                                       (when (:dat/rel o)
                                         :db.type/ref))
                     :db/cardinality (if-let [[cardinality _ _] (:dat/rel o)]
@@ -68,7 +68,6 @@
                                         :db.cardinality/many
                                         nil)
                                       :db.cardinality/one)}
-                   remove-nils)]))
+                   remove-nil-vals)]))
        (into {})))
-
 
