@@ -7,9 +7,8 @@
     [quadvote.model :as model]
     [dat.api :as dat]))
 
-(defonce uuid
-  (memoize (fn [x]
-             (uuid/random))))
+(defn uuid [x]
+  (uuid/from-email (str x)))
 
 (defn generate-user [i]
   (let [id (uuid i)
