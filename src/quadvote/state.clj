@@ -11,7 +11,7 @@
    :sys.component/provides #{:conn}
    :sys.component/start (fn [{:keys [db-path]}]
                           {:conn (dat/init! :dat.db/datascript schema/schema {:file-path db-path})})
-   :sys.component/stop (fn [_] nil)})
+   :sys.component/stop (fn [{:keys [conn]}] (dat/close! conn))})
 
 (defn conn []
   (sys/get :system :conn))

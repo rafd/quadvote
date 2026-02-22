@@ -24,6 +24,13 @@
       (d/create-conn (schema/->db-schema db-type schema)
                      {:storage (d/file-storage (:file-path db-opts))}))}))
 
+(defn close!
+  [db]
+  (let [{::keys [db-type conn]} @db]
+    (case db-type
+      :dat.db/datalevin ((requiring-resolve 'datalevin.core/close) conn)
+      nil)))
+
 (defn clear!
   [db]
   (let [{::keys [db-type schema db-opts]} @db]

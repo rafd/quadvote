@@ -349,7 +349,9 @@
                             (tada/register! t
                                             (concat queries
                                                     commands))
-                            {:tada t}))})
+                            {:tada t}))
+   :sys.component/stop (fn [{:keys [tada]}]
+                         (reset! (:tada/event-store tada) {}))})
 
 (defn registry
   []
