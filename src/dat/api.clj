@@ -2,11 +2,13 @@
   (:require
    [clojure.java.io :as io]
    [datascript.core :as d]
+   [malli.core :as m]
    [bloom.commons.uuid :as uuid]
    [dat.schema :as schema]))
 
 (defn init!
   [db-type schema db-opts]
+  {:pre [(m/validate schema/Schema schema)]}
   (atom
    {::db-type db-type
     ::db-opts db-opts
