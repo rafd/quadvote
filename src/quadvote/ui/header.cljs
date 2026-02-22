@@ -81,12 +81,17 @@
   [membership]
   [:div.header {:tw "flex justify-between items-center pb-4 gap-3"}
    [group-switcher-view membership]
-   (when (:membership/admin? @membership)
+   (when (or (:membership/admin? @membership)
+             (-> @membership :membership/group :group/open-topics?))
      [:div {:tw "text-xs"}
       [ui/button {:on-click (fn []
                               (modal/open! [new-topic-modal-view membership]))}
        [fa/fa-plus-circle-solid {:tw "w-3 h-3"}]
        "Add a Topic"]])
+   (when (:membership/admin? @membership)
+     [ui/button {:on-click (fn []
+                             (pages/navigate-to! [:page/admin {:id (:group/id (:membership/group @membership))}]))}
+      [:span {:tw "text-xs"} "Admin"]])
    (let [amount (:membership/claimable-token-amount @membership)]
      (when (< 0 (or amount 0))
        [:div

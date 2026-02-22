@@ -7,6 +7,7 @@
     [quadvote.ui.pages.group]
     [quadvote.ui.pages.log]
     [quadvote.ui.pages.index]
+    [quadvote.ui.pages.admin]
     [quadvote.ui.common :as ui]
     [quadvote.ui.state :as state]))
 

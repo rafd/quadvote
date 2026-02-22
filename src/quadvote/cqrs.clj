@@ -64,6 +64,10 @@
                                    [:group/id
                                     :group/name
                                     :group/balance
+                                    :group/open-membership?
+                                    :group/open-topics?
+                                    :group/grant-frequency
+                                    :group/grant-amount
                                     {:topic/_group
                                      [:topic/id
                                       :topic/title
@@ -175,7 +179,9 @@
         state/conn
         [{:db/id -1
           :group/id (dat/uuid)
-          :group/name name}
+          :group/name name
+          :group/open-membership? false
+          :group/open-topics? false}
          {:membership/id (dat/uuid)
           :membership/user [:user/id user-id]
           :membership/balance 25
@@ -226,7 +232,10 @@
     (fn [{:keys [user-id group-id]}]
       [(entity-exists?-condition :user/id user-id)
        (entity-exists?-condition :group/id group-id)
-       (user-is-admin-of-group?-condition user-id group-id)])
+       (user-is-member-of-group?-condition user-id group-id)
+       [#(or (state/user-is-admin-of-group? user-id group-id)
+             (state/eav [:group/id group-id] :group/open-topics?))
+        :forbidden "Topic creation is restricted to admins."]])
     :effect
     (fn [{:keys [title description group-id user-id]}]
       (dat/transact! state/conn
@@ -263,6 +272,32 @@
                                     :burn/message message
                                     :burn/user [:user/id user-id]
                                     :burn/timestamp (java.util.Date.)}}]))}
+
+   {:id :api/update-group!
+    :params [:map
+             [:user-id :uuid]
+             [:group-id :uuid]
+             [:name {:optional true} :string]
+             [:open-membership? {:optional true} :boolean]
+             [:open-topics? {:optional true} :boolean]
+             [:grant-frequency {:optional true} :keyword]
+             [:grant-amount {:optional true} :int]]
+    :conditions
+    (fn [{:keys [user-id group-id]}]
+      [(entity-exists?-condition :user/id user-id)
+       (entity-exists?-condition :group/id group-id)
+       (user-is-admin-of-group?-condition user-id group-id)])
+    :effect
+    (fn [{:keys [group-id name open-membership? open-topics? grant-frequency grant-amount]}]
+      (dat/transact! state/conn
+                     [(->> {:group/id group-id
+                            :group/name name
+                            :group/open-membership? open-membership?
+                            :group/open-topics? open-topics?
+                            :group/grant-frequency grant-frequency
+                            :group/grant-amount grant-amount}
+                           (filter (comp some? val))
+                           (into {}))]))}
 
    {:id :api/claim!
     :params {:membership-id uuid?

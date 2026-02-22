@@ -48,10 +48,31 @@
               (assoc {:name "Test Group B"}
                       :user-id admin-user-id))
 
-    (doseq [group-id (dat/q '[:find [?id ...]
-                              :where
+    (doseq [[group-id
+             {:keys [open-membership? open-topics? grant-frequency grant-amount]}]
+            (->> (dat/q '[:find [?id ...]
+                          :where
                           [_ :group/id ?id]]
-                            @state/conn)]
+                        @state/conn)
+                 (map-indexed vector)
+                 (map (fn [[index group-id]]
+                        [group-id
+                         (get [{:open-membership? false
+                                :open-topics? false
+                                :grant-frequency :grant-frequency/monthly
+                                :grant-amount 25}
+                               {:open-membership? true
+                                :open-topics? true
+                                :grant-frequency :grant-frequency/weekly
+                                :grant-amount 10}] index)])))]
+
+      (tada/do! cqrs/t :api/update-group!
+                {:group-id group-id
+                 :user-id admin-user-id
+                 :open-membership? open-membership?
+                 :open-topics? open-topics?
+                 :grant-frequency grant-frequency
+                 :grant-amount grant-amount})
 
       (dotimes [i 10]
         (tada/do! cqrs/t

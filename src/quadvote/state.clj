@@ -8,7 +8,16 @@
   {:entity/group
    {:group/id {:dat/spec :uuid
                :dat/unique :dat.unique/identity}
-    :group/name {:dat/spec :string}}
+    :group/name {:dat/spec :string}
+    :group/open-membership? {:dat/spec :boolean}
+    :group/open-topics? {:dat/spec :boolean}
+    :group/grant-frequency {:dat/spec :keyword
+                            :dat/malli [:enum
+                                        :grant-frequency/never
+                                        :grant-frequency/daily
+                                        :grant-frequency/weekly
+                                        :grant-frequency/monthly]}
+    :group/grant-amount {:dat/spec :int}}
 
    :entity/user
    {:user/id {:dat/spec :uuid
@@ -82,6 +91,17 @@
                     :where
                     [?e ?k ?v]]
                   @conn k v)))
+
+(defn eav
+  [ident k]
+  (dat/q '[:find ?v .
+           :in $ [?id-k ?id-v] ?k
+           :where
+           [?e ?id-k ?id-v]
+           [?e ?k ?v]]
+           @conn
+           ident
+           k))
 
 (defn user-can-afford?
   [{:keys [user-id group-id topic-id voice-amount]}]
@@ -187,8 +207,8 @@
 
 #_(grant-to-group!
    (dat/q '[:find ?group-id .
-          :where [_ :group/id ?group-id]]
-        @conn)
+            :where [_ :group/id ?group-id]]
+          @conn)
    25)
 
 (comment
