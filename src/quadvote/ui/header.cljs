@@ -116,12 +116,13 @@
    [:div.my-balance {:tw "flex items-center gap-1"}
     [ui/token-amount-view (:membership/balance @membership) nil]]
    [ui/button {:on-click (fn []
-                           (state/ajax!
-                            {:uri "/api/auth"
-                             :method :delete
-                             :on-success (fn [_]
-                                           (js/window.location.reload))
-                             :on-error (fn [])}))}
+                           (when (js/confirm "Log out?")
+                             (state/ajax!
+                              {:uri "/api/auth"
+                               :method :delete
+                               :on-success (fn [_]
+                                             (js/window.location.reload))
+                               :on-error (fn [])})))}
     [fa/fa-sign-out-alt-solid {:tw "w-3 h-3"}]]])
 
 
