@@ -179,11 +179,12 @@
    [group/page
     {:membership membership}
     [:<>
-     (when-let [description (-> @membership :membership/group :group/description)]
+     (if-let [description (-> @membership :membership/group :group/description)]
        [:div.description
         {:tw "prose text-sm"
          :dangerouslySetInnerHTML
-         (r/unsafe-html (md/md->html description))}])
+         (r/unsafe-html (md/md->html description))}]
+       [:div.spacer {:tw "h-4"}])
      [:div.topics {:tw "space-y-2"}
       (let [->topic @id->topic]
         (for [topic (->> @sorted-topic-ids
