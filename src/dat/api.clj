@@ -36,7 +36,7 @@
   (let [{::keys [db-type schema db-opts]} @db]
     (swap! db assoc ::conn (d/create-conn
                             (schema/->db-schema db-type schema)
-                            db-opts)))
+                            {:storage (d/file-storage (:file-path db-opts))})))
   ;; datalevin
   #_(d/clear conn))
 
