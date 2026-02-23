@@ -62,19 +62,26 @@
   [*group]
   (r/with-let
    [user (state/tada-atom! [:api/user {}])]
-   (let [groups (->> @user
-                     :membership/_user
-                     (map :membership/group))
+   (let [groups (conj (->> @user
+                           :membership/_user
+                           (map :membership/group)
+                           (map (fn [group]
+                                  (select-keys group [:group/id :group/name])))
+                           set)
+                      (select-keys @*group [:group/id :group/name]))
          current-group-id (:group/id @*group)]
      [:select {:tw (str ui/input-tw " grow bg-transparent text-sm font-bold")
                :value (str current-group-id)
                :on-change (fn [e]
-                            (let [selected (.. e -target -value)
-                                  selected-group (->> groups
-                                                      (filter #(= (str (:group/id %)) selected))
-                                                      first)]
-                              (pages/navigate-to! [:page/group {:id (:group/id selected-group)}])))}
-      (for [{:group/keys [id name]} groups]
+                            (let [id (.. e -target -value)]
+                              (if-let [path ({"discover" [:page/discover]} id)]
+                                (pages/navigate-to! path)
+                                (let [selected-group (->> groups
+                                                          (filter #(= (str (:group/id %)) id))
+                                                          first)]
+                                  (pages/navigate-to! [:page/group {:id (:group/id selected-group)}])))))}
+      (for [{:group/keys [id name]} (conj groups {:group/id "discover"
+                                                  :group/name "Discover other groups..."})]
         ^{:key id}
         [:option {:value (str id)} name])])))
 
@@ -83,7 +90,8 @@
   [:div.header {:tw "flex justify-between items-center gap-3"}
    [group-switcher-view *group]
    (when (or (-> @*group :group/membership :membership/admin?)
-             (-> @*group :group/open-topics?))
+             (and (-> @*group :group/open-topics?)
+                  (-> @*group :group/membership)))
      [:div {:tw "text-xs"}
       [ui/button {:on-click (fn []
                               (modal/open! [new-topic-modal-view *group]))}
@@ -114,8 +122,9 @@
    [ui/button {:on-click (fn [] (modal/open! [info-modal-view]))}
     [fa/fa-question-circle-solid {:tw "w-3 h-3"}]
     [:span {:tw "text-xs"} "WTF?"]]
-   [:div.my-balance {:tw "flex items-center gap-1"}
-    [ui/token-amount-view (-> @*group :group/membership :membership/balance) nil]]
+   (when (-> @*group :group/membership)
+     [:div.my-balance {:tw "flex items-center gap-1"}
+      [ui/token-amount-view (-> @*group :group/membership :membership/balance) nil]])
    [ui/button {:on-click (fn []
                            (when (js/confirm "Log out?")
                              (state/ajax!

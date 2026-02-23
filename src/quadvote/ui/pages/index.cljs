@@ -7,13 +7,14 @@
 (defn view
   [_]
   (r/with-let
-   [user (state/tada-atom! [:api/user {}])]
+    [user (state/tada-atom! [:api/user {}])]
     (let [groups (->> @user
                       :membership/_user
                       (map :membership/group))]
       [:div
-       (when (seq groups)
-         (pages/navigate-to! [:page/group {:id (:group/id (first groups))}]))])))
+       (if (seq groups)
+         (pages/navigate-to! [:page/group {:id (:group/id (first groups))}])
+         (pages/navigate-to! [:page/discover {}]))])))
 
 (pages/register-page!
  {:page/id :page/index

@@ -44,6 +44,15 @@
        @(state/conn)
        user-id))}
 
+   {:id :api/public-groups
+    :return
+    (fn [_]
+      (dat/q
+       '[:find [(pull ?group [:group/id :group/name]) ...]
+         :where
+         [?group :group/open-membership? true]]
+       @(state/conn)))}
+
    {:id :api/group
     :params {:group-id :group/id
              :user-id :user/id}
@@ -51,7 +60,9 @@
     (fn [{:keys [user-id group-id]}]
       [(entity-exists?-condition :user/id user-id)
        (entity-exists?-condition :group/id group-id)
-       (user-is-member-of-group?-condition user-id group-id)])
+       [#(or (state/eav [:group/id group-id] :group/open-membership?)
+             (state/user-is-member-of-group? user-id group-id))
+        :forbidden "You must be a member of this group to view it."]])
     :return
     (fn [{:keys [group-id user-id]}]
       (let [group (dat/q
