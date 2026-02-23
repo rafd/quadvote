@@ -19,7 +19,7 @@
      [:div.bar {:tw "w-3 h-0.75 bg-green-700 rounded"}])])
 
 (defn topic-view
-  [{:keys [*group user]} topic]
+  [{:keys [*group *user]} topic]
   (r/with-let
     [show-description? (r/atom false)
      vote! (fn [{:keys [topic-id new-voice-amount]}]
@@ -44,7 +44,7 @@
                                     (:vote/user vote)))
                              (sort-by :user/id))]]
 
-      (let [vote (state/topic->user-vote topic (:user/id @user))
+      (let [vote (state/topic->user-vote topic (:user/id @*user))
             can-upvote? (and
                          (< (:vote/voice-amount vote) model/max-voice-amount-per-vote)
                          (model/can-afford?
@@ -156,52 +156,52 @@
 (defn view
   [group-id]
   (r/with-let
-   [*group (state/tada-atom! [:api/group {:group-id group-id}])
-    user (state/tada-atom! [:api/user {}])
-    id->topic (r/reaction
-               (let [topics (-> @*group :topic/_group)]
-                 (zipmap (map :topic/id topics)
-                         topics)))
+    [*group (state/tada-atom! [:api/group {:group-id group-id}])
+     *user (state/tada-atom! [:api/user {}])
+     id->topic (r/reaction
+                (let [topics (-> @*group :topic/_group)]
+                  (zipmap (map :topic/id topics)
+                          topics)))
     ;; update order of topics with a delay (for a better user experience)
-    sorted-topic-ids (r/atom [])
-    resort-topics! (fn [topics]
-                     (reset! sorted-topic-ids
-                             (->> topics
-                                  shuffle ;; force random order for equal scoring topics
-                                  (sort-by state/topic->total-voice-amount >)
-                                  (map :topic/id))))
-    resort-topics-debounced! (debounce/debounce resort-topics! 750)
+     sorted-topic-ids (r/atom [])
+     resort-topics! (fn [topics]
+                      (reset! sorted-topic-ids
+                              (->> topics
+                                   shuffle ;; force random order for equal scoring topics
+                                   (sort-by state/topic->total-voice-amount >)
+                                   (map :topic/id))))
+     resort-topics-debounced! (debounce/debounce resort-topics! 750)
     ;; we can't immediately resort, because the list is empty
     ;; rely on the track to pick it up, but don't delay on the first time
-    initialized? (atom false)
-    _ (r/track!
-       (fn []
-         (let [topics (-> @*group :topic/_group)]
-           (when (seq topics)
-             (if @initialized?
-               (resort-topics-debounced! topics)
-               (do
-                 (reset! initialized? true)
-                 (resort-topics! topics)))))))]
-   [group/page
-    {:*group *group}
-    [:<>
-     (if-let [description (-> @*group :group/description)]
-       [:div.description
-        {:tw "prose text-sm"
-         :dangerouslySetInnerHTML
-         (r/unsafe-html (md/md->html description))}]
-       [:div.spacer {:tw "h-4"}])
-     [:div.topics {:tw "space-y-2"}
-      (let [->topic @id->topic]
-        (for [topic (->> @sorted-topic-ids
-                         (map ->topic)
-                         (remove :topic/burn))]
-          ^{:key (:topic/id topic)}
-          [topic-view
-           {:*group *group
-            :user user}
-           topic]))]]]))
+     initialized? (atom false)
+     _ (r/track!
+        (fn []
+          (let [topics (-> @*group :topic/_group)]
+            (when (seq topics)
+              (if @initialized?
+                (resort-topics-debounced! topics)
+                (do
+                  (reset! initialized? true)
+                  (resort-topics! topics)))))))]
+    [group/page
+     {:*group *group}
+     [:<>
+      (if-let [description (-> @*group :group/description)]
+        [:div.description
+         {:tw "prose text-sm"
+          :dangerouslySetInnerHTML
+          (r/unsafe-html (md/md->html description))}]
+        [:div.spacer {:tw "h-4"}])
+      [:div.topics {:tw "space-y-2"}
+       (let [->topic @id->topic]
+         (for [topic (->> @sorted-topic-ids
+                          (map ->topic)
+                          (remove :topic/burn))]
+           ^{:key (:topic/id topic)}
+           [topic-view
+            {:*group *group
+             :*user *user}
+            topic]))]]]))
 
 (pages/register-page!
  {:page/id :page/group

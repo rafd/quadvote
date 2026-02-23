@@ -7,8 +7,8 @@
 (defn view
   [_]
   (r/with-let
-    [user (state/tada-atom! [:api/user {}])]
-    (let [groups (->> @user
+    [*user (state/tada-atom! [:api/user {}])]
+    (let [groups (->> @*user
                       :membership/_user
                       (map :membership/group))]
       [:div
