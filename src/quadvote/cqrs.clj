@@ -1,10 +1,10 @@
 (ns quadvote.cqrs
   (:require
-    [tada.events.core :as tada]
-    [dat.api :as dat]
-    [sys.api :as sys]
-    [quadvote.state :as state]
-    [quadvote.model :as model]))
+   [tada.events.core :as tada]
+   [dat.api :as dat]
+   [sys.api :as sys]
+   [quadvote.state :as state]
+   [quadvote.model :as model]))
 
 (defn entity-exists?-condition
   [key value]
@@ -37,7 +37,7 @@
                             {:membership/_user
                              [:membership/id
                               {:membership/group [:group/id
-                                                  :group/name]} ]}]) .
+                                                  :group/name]}]}]) .
          :in $ ?user-id
          :where
          [?user :user/id ?user-id]]
@@ -70,25 +70,25 @@
                                          :group/name
                                          :group/description
                                          :group/balance
-                                    :group/open-membership?
-                                    :group/open-topics?
-                                    :group/grant-frequency
-                                    :group/grant-amount
-                                    {:topic/_group
-                                     [:topic/id
-                                      :topic/title
-                                      :topic/description
-                                      {:topic/burn
-                                       [:burn/id
-                                        :burn/message
-                                        :burn/timestamp
-                                        {:burn/user
-                                         [:user/id
-                                          :user/name]}]}
-                                      {:topic/user
-                                       [:user/id
-                                        :user/name]}
-                                      {:vote/_topic
+                                         :group/open-membership?
+                                         :group/open-topics?
+                                         :group/grant-frequency
+                                         :group/grant-amount
+                                         {:topic/_group
+                                          [:topic/id
+                                           :topic/title
+                                           :topic/description
+                                           {:topic/burn
+                                            [:burn/id
+                                             :burn/message
+                                             :burn/timestamp
+                                             {:burn/user
+                                              [:user/id
+                                               :user/name]}]}
+                                           {:topic/user
+                                            [:user/id
+                                             :user/name]}
+                                           {:vote/_topic
                                             [:vote/id
                                              :vote/voice-amount
                                              {:vote/user [:user/id
@@ -106,11 +106,11 @@
                           :in $ ?group-id ?user-id
                           :where
                           [?group :group/id ?group-id]
-         [?user :user/id ?user-id]
-         [?membership :membership/group ?group]
-         [?membership :membership/user ?user]]
-       @(state/conn)
-       group-id
+                          [?user :user/id ?user-id]
+                          [?membership :membership/group ?group]
+                          [?membership :membership/user ?user]]
+                        @(state/conn)
+                        group-id
                         user-id)]
         (assoc group :group/membership membership)))}])
 
@@ -190,19 +190,19 @@
     :effect
     (fn [{:keys [name user-id]}]
       (dat/transact!
-        (state/conn)
-        [{:db/id -1
-          :group/id (dat/uuid)
-          :group/name name
-          :group/description ""
-          :group/open-membership? false
-          :group/open-topics? false}
-         {:membership/id (dat/uuid)
-          :membership/user [:user/id user-id]
-          :membership/balance 25
-          :membership/claimable-token-amount 25
-          :membership/group -1
-          :membership/admin? true}]))}
+       (state/conn)
+       [{:db/id -1
+         :group/id (dat/uuid)
+         :group/name name
+         :group/description ""
+         :group/open-membership? false
+         :group/open-topics? false}
+        {:membership/id (dat/uuid)
+         :membership/user [:user/id user-id]
+         :membership/balance 25
+         :membership/claimable-token-amount 25
+         :membership/group -1
+         :membership/admin? true}]))}
 
    ;; admin-only
 
@@ -353,7 +353,6 @@
                         {:claim/id (dat/uuid)
                          :claim/membership [:membership/id membership-id]
                          :claim/timestamp (java.util.Date.)}])))}])
-
 
 (def component
   {:sys.component/id :tada
