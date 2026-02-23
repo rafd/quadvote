@@ -205,7 +205,9 @@
            :membership/claimable-token-amount 0
            :membership/group -1
            :membership/admin? true}])
-        (state/grant-to-membership! membership-id group-id)))}
+        (state/grant-to-membership! membership-id group-id)
+        {:group-id group-id}))
+    :return :tada/effect-return}
 
    ;; admin-only
 

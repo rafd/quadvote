@@ -24,14 +24,26 @@
                 :value (str current-group-id)
                 :on-change (fn [e]
                              (let [id (.. e -target -value)]
-                               (if-let [path ({"discover" [:page/discover]} id)]
-                                 (pages/navigate-to! path)
+                               (cond
+                                 (= "discover" id)
+                                 (pages/navigate-to! [:page/discover])
+                                 (= "create" id)
+                                 (let [name (js/prompt "Name your group:")]
+                                   (when (seq name)
+                                     (-> (state/tada! [:api/create-group! {:name name}])
+                                         (.then (fn [result]
+                                                  (state/refresh! *user)
+                                                  (pages/navigate-to! [:page/group {:id (:group-id result)}]))))))
+                                 :else
                                  (let [selected-group (->> groups
                                                            (filter #(= (str (:group/id %)) id))
                                                            first)]
                                    (pages/navigate-to! [:page/group {:id (:group/id selected-group)}])))))}
-       (for [{:group/keys [id name]} (conj groups {:group/id "discover"
-                                                   :group/name "Discover other groups..."})]
+       (for [{:group/keys [id name]} (conj groups
+                                           {:group/id "discover"
+                                            :group/name "Discover other groups..."}
+                                           {:group/id "create"
+                                            :group/name "Create your own group..."})]
          ^{:key id}
          [:option {:value (str id)} name])])))
 
