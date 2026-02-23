@@ -146,6 +146,15 @@
                   :membership/claimable-token-amount (max amount to-grant-amount)}))))
     nil))
 
+(defn grant-to-membership!
+  [membership-id group-id]
+  (when-let [grant-amount (eav [:group/id group-id] :group/grant-amount)]
+    (let [current-claimable (or (eav [:membership/id membership-id] :membership/claimable-token-amount) 0)]
+      (dat/transact!
+       (conn)
+       [{:membership/id membership-id
+         :membership/claimable-token-amount (max current-claimable grant-amount)}]))))
+
 #_(grant-to-group!
    (dat/q '[:find ?group-id .
             :where [_ :group/id ?group-id]]

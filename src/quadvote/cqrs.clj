@@ -187,20 +187,25 @@
       [(entity-exists?-condition :user/id user-id)])
     :effect
     (fn [{:keys [name user-id]}]
-      (dat/transact!
-       (state/conn)
-       [{:db/id -1
-         :group/id (dat/uuid)
-         :group/name name
-         :group/description ""
-         :group/open-membership? false
-         :group/open-topics? false}
-        {:membership/id (dat/uuid)
-         :membership/user [:user/id user-id]
-         :membership/balance 25
-         :membership/claimable-token-amount 25
-         :membership/group -1
-         :membership/admin? true}]))}
+      (let [group-id (dat/uuid)
+            membership-id (dat/uuid)]
+        (dat/transact!
+         (state/conn)
+         [{:db/id -1
+           :group/id group-id
+           :group/name name
+           :group/description ""
+           :group/grant-amount 25
+           :group/grant-frequency :grant-frequency/monthly
+           :group/open-membership? false
+           :group/open-topics? false}
+          {:membership/id membership-id
+           :membership/user [:user/id user-id]
+           :membership/balance 0
+           :membership/claimable-token-amount 0
+           :membership/group -1
+           :membership/admin? true}])
+        (state/grant-to-membership! membership-id group-id)))}
 
    ;; admin-only
 
@@ -219,22 +224,24 @@
         :forbidden "User is already a member of this group."]])
     :effect
     (fn [{:keys [name group-id email]}]
-      (dat/transact! (state/conn)
-                     (if-let [user-id (state/email->user-id email)]
-                       [{:membership/id (dat/uuid)
-                         :membership/user [:user/id user-id]
-                         :membership/claimable-token-amount 25
-                         :membership/balance 0
-                         :membership/group [:group/id group-id]}]
-                       [{:db/id -1
-                         :user/id (dat/uuid)
-                         :user/name name
-                         :user/email email}
-                        {:membership/id (dat/uuid)
-                         :membership/claimable-token-amount 25
-                         :membership/balance 0
-                         :membership/user -1
-                         :membership/group [:group/id group-id]}])))}
+      (let [membership-id (dat/uuid)]
+        (dat/transact! (state/conn)
+                       (if-let [user-id (state/email->user-id email)]
+                         [{:membership/id membership-id
+                           :membership/user [:user/id user-id]
+                           :membership/claimable-token-amount 0
+                           :membership/balance 0
+                           :membership/group [:group/id group-id]}]
+                         [{:db/id -1
+                           :user/id (dat/uuid)
+                           :user/name name
+                           :user/email email}
+                          {:membership/id membership-id
+                           :membership/claimable-token-amount 0
+                           :membership/balance 0
+                           :membership/user -1
+                           :membership/group [:group/id group-id]}]))
+        (state/grant-to-membership! membership-id group-id)))}
 
    {:id :api/create-topic!
     :params {:title :topic/title
@@ -327,12 +334,14 @@
         :forbidden "User is already a member of this group."]])
     :effect
     (fn [{:keys [user-id group-id]}]
-      (dat/transact! (state/conn)
-                     [{:membership/id (dat/uuid)
-                       :membership/user [:user/id user-id]
-                       :membership/claimable-token-amount 25
-                       :membership/balance 0
-                       :membership/group [:group/id group-id]}]))}
+      (let [membership-id (dat/uuid)]
+        (dat/transact! (state/conn)
+                       [{:membership/id membership-id
+                         :membership/user [:user/id user-id]
+                         :membership/claimable-token-amount 0
+                         :membership/balance 0
+                         :membership/group [:group/id group-id]}])
+        (state/grant-to-membership! membership-id group-id)))}
 
    {:id :api/claim!
     :params {:membership-id :membership/id
