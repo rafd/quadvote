@@ -66,6 +66,13 @@
                   opts)]
         children))
 
+(defn icon-button
+  [opts & children]
+  (into [:button (merge
+                  {:tw "p-1"}
+                  opts)]
+        children))
+
 (defn user-circles
   [users]
   [:div.users {:tw "flex -space-x-1.5"}

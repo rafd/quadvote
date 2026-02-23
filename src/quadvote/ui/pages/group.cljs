@@ -5,12 +5,42 @@
    [bloom.commons.fontawesome :as fa]
    [bloom.commons.debounce :as debounce]
    [markdown.core :as md]
+   [goog.object :as o]
    [reagent.core :as r]
    [quadvote.ui.group-common :as group]
    [quadvote.ui.common :as ui]
    [quadvote.model :as model]
    [quadvote.ui.state :as state]
    [quadvote.ui.modal :as modal]))
+
+(defn new-topic-modal-view
+  [*group]
+  [:form {:tw "space-y-2"
+          :on-submit (fn [e]
+                       (.preventDefault e)
+                       (-> (state/tada!
+                            [:api/create-topic!
+                             {:title (-> e .-target .-elements (o/get "title") .-value)
+                              :description (-> e .-target .-elements (o/get "description") .-value)
+                              :group-id @state/group-id}])
+                           (.then (fn []
+                                    (state/refresh! *group)
+                                    (modal/close!)))))}
+   [:h1 {:tw "font-bold"} "Add a Topic"]
+   [:label {:tw "block"}
+    [:div "Title"]
+    [:input {:type "text"
+             :name "title"
+             :tw ui/input-tw
+             :required true
+             :auto-focus true}]]
+   [:label {:tw "block"}
+    [:div "Description"]
+    [:textarea {:name "description"
+                :tw ui/input-tw
+                :required true}]]
+   [:div
+    [ui/button {} "Submit"]]])
 
 (defn voting-controls-linear-view [vote]
   [:div.votes {:tw "flex flex-col space-y-3px min-w-3"}
@@ -183,15 +213,28 @@
                 (do
                   (reset! initialized? true)
                   (resort-topics! topics)))))))]
+   [:<>
+
     [group/page
      {:*group *group}
      [:<>
-      (if-let [description (-> @*group :group/description)]
-        [:div.description
-         {:tw "prose text-sm"
-          :dangerouslySetInnerHTML
-          (r/unsafe-html (md/md->html description))}]
-        [:div.spacer {:tw "h-4"}])
+      [:div {:tw "flex justify-between items-baseline"}
+       (if-let [description (-> @*group :group/description)]
+         [:div.description
+          {:tw "prose text-sm"
+           :dangerouslySetInnerHTML
+           (r/unsafe-html (md/md->html description))}]
+         [:div.spacer {:tw "h-4"}])
+       (when (or (-> @*group :group/membership :membership/admin?)
+                 (and (-> @*group :group/open-topics?)
+                      (-> @*group :group/membership)))
+         [:div {:tw "text-xs"}
+          [ui/button {:on-click (fn []
+                                  (modal/open! [new-topic-modal-view *group]))}
+           [fa/fa-plus-circle-solid {:tw "w-3 h-3"}]
+           "Add a Topic"]])]
+      (when (state/error *group)
+        "This group does not exist, or you do not have access to it.")
       [:div.topics {:tw "space-y-2"}
        (let [->topic @id->topic]
          (for [topic (->> @sorted-topic-ids
@@ -201,7 +244,7 @@
            [topic-view
             {:*group *group
              :*user *user}
-            topic]))]]]))
+            topic]))]]]]))
 
 (pages/register-page!
  {:page/id :page/group

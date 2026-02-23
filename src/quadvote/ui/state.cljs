@@ -38,13 +38,16 @@
     a
     (let [refresh-fn (atom nil)
           a (let [a (with-meta (r/atom nil)
-                      {::refresh-fn refresh-fn})]
+                      {::refresh-fn refresh-fn
+                       ::error (r/atom nil)})]
               (swap! tada-atoms-cache assoc e a)
               a)
           f (fn []
               (-> (tada! e)
                   (.then (fn [v]
-                           (reset! a v)))))]
+                           (reset! a v)))
+                  (.catch (fn [err]
+                            (swap! tada-atoms-cache update e vary-meta update ::error reset! err)))))]
       (reset! refresh-fn f)
       (f)
       a)))
@@ -52,6 +55,10 @@
 (defn refresh!
   [a]
   (@(::refresh-fn (meta a))))
+
+(defn error
+  [a]
+  @(::error (meta a)))
 
 ; ---
 

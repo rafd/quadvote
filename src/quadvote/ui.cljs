@@ -4,11 +4,13 @@
    [bloom.commons.pages :as pages]
    [goog.object :as o]
    [reagent.core :as r]
+   [quadvote.ui.modal :as modal]
    [quadvote.ui.pages.group]
    [quadvote.ui.pages.log]
    [quadvote.ui.pages.discover]
    [quadvote.ui.pages.index]
    [quadvote.ui.pages.admin]
+   [quadvote.ui.header :as header]
    [quadvote.ui.common :as ui]
    [quadvote.ui.state :as state]))
 
@@ -47,13 +49,16 @@
 
 (defn app-view []
   (r/with-let
-    [user (state/tada-atom! [:api/user {}])]
+    [*user (state/tada-atom! [:api/user {}])]
     [:div {:tw "bg-#edeef3 min-h-screen"}
      [:style
      ;; temporary fix for seizure-inducing scrollbar when popover is active
       "body { overflow-x: hidden }
 
      .group:hover  .group\\:hover\\:text-gray-600 { color: #4b5563; }"]
-     (if (nil? @user)
+     (if (nil? @*user)
        [auth-view]
-       [pages/current-page-view])]))
+       [:div
+        [modal/modal-view]
+        [header/header-view {:*user *user}]
+        [pages/current-page-view]])]))
