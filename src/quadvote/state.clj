@@ -1,5 +1,6 @@
 (ns quadvote.state
   (:require
+   [clojure.string :as string]
    [dat.api :as dat]
    [sys.api :as sys]
    [quadvote.model :as model]
@@ -116,6 +117,14 @@
            [?e :user/id ?id]]
          @(conn)
          email))
+
+(defn create-user!
+  [email]
+  (dat/transact!
+   (conn)
+   [{:user/id (dat/uuid)
+     :user/name (first (string/split email #"@"))
+     :user/email email}]))
 
 (defn grant-to-group!
   [group-id to-grant-amount]

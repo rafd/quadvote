@@ -1,5 +1,6 @@
 (ns quadvote.routes
   (:require
+   [clojure.string :as string]
    [bloom.omni.auth.token :as token]
    [bloom.commons.tada.rpc.server :as tada.rpc]
    [sys.api :as sys]
@@ -21,8 +22,12 @@
   [cqrs-registry]
   [[[:post "/api/auth"]
     (fn [request]
-      (let [email (get-in request [:body-params :email])]
-        (if-let [user-id (state/email->user-id email)]
+      (let [email (-> (get-in request [:body-params :email])
+                      string/trim
+                      string/lower-case)]
+        (if-let [user-id (or (state/email->user-id email)
+                             (do (state/create-user! email)
+                                 (state/email->user-id email)))]
           (do
             (future
               (let [link (wrap-login {:url "/"
