@@ -88,54 +88,62 @@
 (defn header-view
   [{:keys [*group]}]
   (r/with-let
-   [*user (state/tada-atom! [:api/user {}])]
-   [:div.header {:tw "flex justify-between items-center gap-3"}
-    [group-switcher-view *group]
-    (when (or (-> @*group :group/membership :membership/admin?)
-              (and (-> @*group :group/open-topics?)
-                   (-> @*group :group/membership)))
-      [:div {:tw "text-xs"}
+    [*user (state/tada-atom! [:api/user {}])]
+    [:div.header {:tw "flex justify-between items-center gap-3"}
+     [group-switcher-view *group]
+     (when (and (nil? (-> @*group :group/membership))
+                (-> @*group :group/open-membership?))
        [ui/button {:on-click (fn []
-                               (modal/open! [new-topic-modal-view *group]))}
-        [fa/fa-plus-circle-solid {:tw "w-3 h-3"}]
-        "Add a Topic"]])
-    (when (-> @*group :group/membership :membership/admin?)
-      [ui/button {:on-click (fn []
-                              (pages/navigate-to! [:page/admin {:id (:group/id @*group)}]))}
-       [:span {:tw "text-xs"} "Admin"]])
-    (let [amount (-> @*group :group/membership :membership/claimable-token-amount)]
-      (when (< 0 (or amount 0))
-        [:div
-         [:span {:tw "text-xs"}
-          "Claim your bonus → "]
-         [:button {:on-click (fn []
-                               (-> (state/tada!
-                                    [:api/claim!
-                                     {:membership-id (-> @*group :group/membership :membership/id)}])
-                                   (.then (fn [_]
+                               (-> (state/tada! [:api/join-group!
+                                                 {:group-id (:group/id @*group)}])
+                                   (.then (fn []
                                             (state/refresh! *group)))))}
-          [ui/token-amount-view amount :gain]]]))
-    [ui/button {:on-click (fn []
-                            (pages/navigate-to! [:page/group {:id (:group/id @*group)}]))}
-     [:span {:tw "text-xs"} "Active"]]
-    [ui/button {:on-click (fn []
-                            (pages/navigate-to! [:page/log {:id (:group/id @*group)}]))}
-     [:span {:tw "text-xs"} "Complete"]]
-    [ui/button {:on-click (fn [] (modal/open! [info-modal-view]))}
-     [fa/fa-question-circle-solid {:tw "w-3 h-3"}]
-     [:span {:tw "text-xs"} "WTF?"]]
-    (when (-> @*group :group/membership)
-      [:div.my-balance {:tw "flex items-center gap-1"}
-       [ui/token-amount-view (-> @*group :group/membership :membership/balance) nil]])
-    [:div {:tw "flex items-center gap-1"}
-     (when-let [name (:user/name @*user)]
-       [:span {:tw "text-xs"} name])
+        [:span {:tw "text-xs"} "Join Group"]])
+     (when (or (-> @*group :group/membership :membership/admin?)
+               (and (-> @*group :group/open-topics?)
+                    (-> @*group :group/membership)))
+       [:div {:tw "text-xs"}
+        [ui/button {:on-click (fn []
+                                (modal/open! [new-topic-modal-view *group]))}
+         [fa/fa-plus-circle-solid {:tw "w-3 h-3"}]
+         "Add a Topic"]])
+     (when (-> @*group :group/membership :membership/admin?)
+       [ui/button {:on-click (fn []
+                               (pages/navigate-to! [:page/admin {:id (:group/id @*group)}]))}
+        [:span {:tw "text-xs"} "Admin"]])
+     (let [amount (-> @*group :group/membership :membership/claimable-token-amount)]
+       (when (< 0 (or amount 0))
+         [:div
+          [:span {:tw "text-xs"}
+           "Claim your bonus → "]
+          [:button {:on-click (fn []
+                                (-> (state/tada!
+                                     [:api/claim!
+                                      {:membership-id (-> @*group :group/membership :membership/id)}])
+                                    (.then (fn [_]
+                                             (state/refresh! *group)))))}
+           [ui/token-amount-view amount :gain]]]))
      [ui/button {:on-click (fn []
-                             (when (js/confirm "Log out?")
-                               (state/ajax!
-                                {:uri "/api/auth"
-                                 :method :delete
-                                 :on-success (fn [_]
-                                               (js/window.location.reload))
-                                 :on-error (fn [])})))}
-      [fa/fa-sign-out-alt-solid {:tw "w-3 h-3"}]]]]))
+                             (pages/navigate-to! [:page/group {:id (:group/id @*group)}]))}
+      [:span {:tw "text-xs"} "Active"]]
+     [ui/button {:on-click (fn []
+                             (pages/navigate-to! [:page/log {:id (:group/id @*group)}]))}
+      [:span {:tw "text-xs"} "Complete"]]
+     [ui/button {:on-click (fn [] (modal/open! [info-modal-view]))}
+      [fa/fa-question-circle-solid {:tw "w-3 h-3"}]
+      [:span {:tw "text-xs"} "WTF?"]]
+     (when (-> @*group :group/membership)
+       [:div.my-balance {:tw "flex items-center gap-1"}
+        [ui/token-amount-view (-> @*group :group/membership :membership/balance) nil]])
+     [:div {:tw "flex items-center gap-1"}
+      (when-let [name (:user/name @*user)]
+        [:span {:tw "text-xs"} name])
+      [ui/button {:on-click (fn []
+                              (when (js/confirm "Log out?")
+                                (state/ajax!
+                                 {:uri "/api/auth"
+                                  :method :delete
+                                  :on-success (fn [_]
+                                                (js/window.location.reload))
+                                  :on-error (fn [])})))}
+       [fa/fa-sign-out-alt-solid {:tw "w-3 h-3"}]]]]))

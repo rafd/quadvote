@@ -115,9 +115,7 @@
         (assoc group :group/membership membership)))}])
 
 (def commands
-  [
-
-   {:id :api/vote!
+  [{:id :api/vote!
     :params {:topic-id :topic/id
              :voice-amount :vote/voice-amount
              :user-id :user/id}
@@ -315,6 +313,26 @@
                             :group/grant-amount grant-amount}
                            (filter (comp some? val))
                            (into {}))]))}
+
+   {:id :api/join-group!
+    :params {:group-id :group/id
+             :user-id :user/id}
+    :conditions
+    (fn [{:keys [user-id group-id]}]
+      [(entity-exists?-condition :user/id user-id)
+       (entity-exists?-condition :group/id group-id)
+       [#(state/eav [:group/id group-id] :group/open-membership?)
+        :forbidden "This group is not open for self-registration."]
+       [#(not (state/user-is-member-of-group? user-id group-id))
+        :forbidden "User is already a member of this group."]])
+    :effect
+    (fn [{:keys [user-id group-id]}]
+      (dat/transact! (state/conn)
+                     [{:membership/id (dat/uuid)
+                       :membership/user [:user/id user-id]
+                       :membership/claimable-token-amount 25
+                       :membership/balance 0
+                       :membership/group [:group/id group-id]}]))}
 
    {:id :api/claim!
     :params {:membership-id :membership/id
