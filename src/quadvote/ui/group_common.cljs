@@ -4,6 +4,7 @@
 
 (defn page
   [{:keys [*group]} content]
-  [:div {:tw "px-8 p-4 max-w-40rem mx-auto"}
+  [:div
    [group-header/header-view {:*group *group}]
-   content])
+   [:div {:tw "max-w-40rem mx-auto px-4"}
+    content]])

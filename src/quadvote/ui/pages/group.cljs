@@ -213,38 +213,36 @@
                 (do
                   (reset! initialized? true)
                   (resort-topics! topics)))))))]
-   [:<>
-
-    [group/page
-     {:*group *group}
-     [:<>
-      [:div {:tw "flex justify-between items-baseline"}
-       (if-let [description (-> @*group :group/description)]
-         [:div.description
-          {:tw "prose text-sm"
-           :dangerouslySetInnerHTML
-           (r/unsafe-html (md/md->html description))}]
-         [:div.spacer {:tw "h-4"}])
-       (when (or (-> @*group :group/membership :membership/admin?)
-                 (and (-> @*group :group/open-topics?)
-                      (-> @*group :group/membership)))
-         [:div {:tw "text-xs"}
-          [ui/button {:on-click (fn []
-                                  (modal/open! [new-topic-modal-view *group]))}
-           [fa/fa-plus-circle-solid {:tw "w-3 h-3"}]
-           "Add a Topic"]])]
-      (when (state/error *group)
-        "This group does not exist, or you do not have access to it.")
-      [:div.topics {:tw "space-y-2"}
-       (let [->topic @id->topic]
-         (for [topic (->> @sorted-topic-ids
-                          (map ->topic)
-                          (remove :topic/burn))]
-           ^{:key (:topic/id topic)}
-           [topic-view
-            {:*group *group
-             :*user *user}
-            topic]))]]]]))
+   [group/page
+    {:*group *group}
+    [:<>
+     [:div {:tw "flex justify-between items-baseline"}
+      (if-let [description (-> @*group :group/description)]
+        [:div.description
+         {:tw "prose text-sm"
+          :dangerouslySetInnerHTML
+          (r/unsafe-html (md/md->html description))}]
+        [:div.spacer {:tw "h-4"}])
+      (when (or (-> @*group :group/membership :membership/admin?)
+                (and (-> @*group :group/open-topics?)
+                     (-> @*group :group/membership)))
+        [:div {:tw "text-xs"}
+         [ui/button {:on-click (fn []
+                                 (modal/open! [new-topic-modal-view *group]))}
+          [fa/fa-plus-circle-solid {:tw "w-3 h-3"}]
+          "Add a Topic"]])]
+     (when (state/error *group)
+       "This group does not exist, or you do not have access to it.")
+     [:div.topics {:tw "space-y-2"}
+      (let [->topic @id->topic]
+        (for [topic (->> @sorted-topic-ids
+                         (map ->topic)
+                         (remove :topic/burn))]
+          ^{:key (:topic/id topic)}
+          [topic-view
+           {:*group *group
+            :*user *user}
+           topic]))]]]))
 
 (pages/register-page!
  {:page/id :page/group
