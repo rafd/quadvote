@@ -1,9 +1,9 @@
 (ns quadvote.config
   (:refer-clojure :exclude [get])
   (:require
+   [bloom.commons.config :as config]
    [malli.core :as m]
-   [sys.api :as sys]
-   [bloom.commons.config :as config]))
+   [sys.api :as sys]))
 
 (def schema
   [:map

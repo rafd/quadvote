@@ -1,17 +1,17 @@
 (ns quadvote.ui.pages.group
   (:require
    [clojure.string :as string]
-   [bloom.commons.pages :as pages]
-   [bloom.commons.fontawesome :as fa]
    [bloom.commons.debounce :as debounce]
-   [markdown.core :as md]
+   [bloom.commons.fontawesome :as fa]
+   [bloom.commons.pages :as pages]
    [goog.object :as o]
+   [markdown.core :as md]
    [reagent.core :as r]
-   [quadvote.ui.group-common :as group]
-   [quadvote.ui.common :as ui]
    [quadvote.model :as model]
-   [quadvote.ui.state :as state]
-   [quadvote.ui.modal :as modal]))
+   [quadvote.ui.common :as ui]
+   [quadvote.ui.group-common :as group]
+   [quadvote.ui.modal :as modal]
+   [quadvote.ui.state :as state]))
 
 (defn new-topic-modal-view
   [*group]

@@ -3,11 +3,11 @@
   (:require
    [sys.api :as sys]
    ;; components
-   [quadvote.omni :as omni]
    [quadvote.config :as config]
-   [quadvote.jobs :as jobs]
-   [quadvote.routes :as routes]
    [quadvote.cqrs :as cqrs]
+   [quadvote.jobs :as jobs]
+   [quadvote.omni :as omni]
+   [quadvote.routes :as routes]
    [quadvote.state :as state]))
 
 (sys/set! :system

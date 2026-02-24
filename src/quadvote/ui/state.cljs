@@ -1,7 +1,7 @@
 (ns quadvote.ui.state
   (:require
-   [bloom.commons.uuid :as uuid]
    [bloom.commons.ajax :as ajax]
+   [bloom.commons.uuid :as uuid]
    [reagent.core :as r]
    [quadvote.model :as model]))
 

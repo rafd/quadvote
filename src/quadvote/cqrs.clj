@@ -1,10 +1,10 @@
 (ns quadvote.cqrs
   (:require
-   [tada.events.core :as tada]
    [dat.api :as dat]
    [sys.api :as sys]
-   [quadvote.state :as state]
-   [quadvote.model :as model]))
+   [tada.events.core :as tada]
+   [quadvote.model :as model]
+   [quadvote.state :as state]))
 
 (defn entity-exists?-condition
   [key value]

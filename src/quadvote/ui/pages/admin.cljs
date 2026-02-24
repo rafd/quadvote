@@ -1,8 +1,8 @@
 (ns quadvote.ui.pages.admin
   (:require
+   [bloom.commons.pages :as pages]
    [goog.object :as o]
    [reagent.core :as r]
-   [bloom.commons.pages :as pages]
    [quadvote.ui.common :as ui]
    [quadvote.ui.form :as form]
    [quadvote.ui.group-common :as group]

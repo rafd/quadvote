@@ -1,11 +1,11 @@
 (ns quadvote.routes
   (:require
    [clojure.string :as string]
-   [bloom.omni.auth.token :as token]
    [bloom.commons.tada.rpc.server :as tada.rpc]
+   [bloom.omni.auth.token :as token]
    [sys.api :as sys]
-   [quadvote.cqrs :as cqrs]
    [quadvote.config :as config]
+   [quadvote.cqrs :as cqrs]
    [quadvote.email :as email]
    [quadvote.state :as state]))
 

@@ -4,7 +4,7 @@
    [dat.api :as dat]
    [quadvote.state :as state])
   (:import
-   (java.time DayOfWeek Period ZonedDateTime ZoneId LocalTime)))
+   (java.time DayOfWeek LocalTime Period ZoneId ZonedDateTime)))
 
 (defn grant-day?
   [frequency ^ZonedDateTime zdt]

@@ -2,8 +2,8 @@
   (:require
    [bloom.commons.pages :as pages]
    [reagent.core :as r]
-   [quadvote.ui.group-common :as group]
    [quadvote.ui.common :as ui]
+   [quadvote.ui.group-common :as group]
    [quadvote.ui.state :as state]))
 
 (defn format-timestamp

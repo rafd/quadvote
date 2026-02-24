@@ -1,11 +1,11 @@
 (ns dat.api
   (:require
    [clojure.java.io :as io]
-   [datascript.core :as d]
+   [bloom.commons.uuid :as uuid]
    [malli.core :as m]
    [malli.registry :as mr]
-   [bloom.commons.uuid :as uuid]
-   [dat.schema :as schema]))
+   [dat.schema :as schema]
+   [datascript.core :as d]))
 
 (defn init!
   [db-type schema db-opts]

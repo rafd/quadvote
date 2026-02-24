@@ -2,8 +2,8 @@
   (:require
    [bloom.commons.pages :as pages]
    [reagent.core :as r]
-   [quadvote.ui.state :as state]
-   [quadvote.ui.common :as ui]))
+   [quadvote.ui.common :as ui]
+   [quadvote.ui.state :as state]))
 
 (defn group-switcher-view
   [*group]
