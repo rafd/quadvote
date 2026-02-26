@@ -199,63 +199,67 @@
 (defn view
   [group-id]
   (r/with-let
-    [*group (state/tada-atom! [:api/group {:group-id group-id}])
-     *user (state/tada-atom! [:api/user {}])
-     id->topic (r/reaction
-                (let [topics (-> @*group :topic/_group)]
-                  (zipmap (map :topic/id topics)
-                          topics)))
+   [*group (state/tada-atom! [:api/group {:group-id group-id}])
+    *user (state/tada-atom! [:api/user {}])
+    id->topic (r/reaction
+               (let [topics (-> @*group :topic/_group)]
+                 (zipmap (map :topic/id topics)
+                         topics)))
     ;; update order of topics with a delay (for a better user experience)
-     sorted-topic-ids (r/atom [])
-     resort-topics! (fn [topics]
-                      (reset! sorted-topic-ids
-                              (->> topics
-                                   shuffle ;; force random order for equal scoring topics
-                                   (sort-by state/topic->total-voice-amount >)
-                                   (map :topic/id))))
-     resort-topics-debounced! (debounce/debounce resort-topics! 750)
+    sorted-topic-ids (r/atom [])
+    resort-topics! (fn [topics]
+                     (reset! sorted-topic-ids
+                             (->> topics
+                                  (sort-by (fn [topic]
+                                             [(- (state/topic->total-voice-amount topic))
+                                              ;; each user gets a different ordering for tied topics
+                                              ;; (so that topics aren't biased for everyone)
+                                              (* (hash (:user/id *user))
+                                                 (hash (:topic/id topic)))]))
+                                  (map :topic/id))))
+    resort-topics-debounced! (debounce/debounce resort-topics! 750)
     ;; we can't immediately resort, because the list is empty
     ;; rely on the track to pick it up, but don't delay on the first time
-     initialized? (atom false)
-     _ (r/track!
-        (fn []
-          (let [topics (-> @*group :topic/_group)]
-            (when (seq topics)
-              (if @initialized?
-                (resort-topics-debounced! topics)
-                (do
-                  (reset! initialized? true)
-                  (resort-topics! topics)))))))]
-    [group/page
-     {:*group *group}
-     [:<>
-      [:div {:tw "flex justify-between items-baseline"}
-       (if-let [description (-> @*group :group/description)]
-         [:div.description
-          {:tw "prose text-sm"
-           :dangerouslySetInnerHTML
-           (r/unsafe-html (md/md->html description))}]
-         [:div.spacer {:tw "h-4"}])
-       (when (or (-> @*group :group/membership :membership/admin?)
-                 (and (-> @*group :group/open-topics?)
-                      (-> @*group :group/membership)))
-         [:div {:tw "text-xs"}
-          [ui/button {:on-click (fn []
-                                  (modal/open! [new-topic-modal-view *group]))}
-           [fa/fa-plus-circle-solid {:tw "w-3 h-3"}]
-           "Add a Topic"]])]
-      (when (state/error *group)
-        "This group does not exist, or you do not have access to it.")
-      [:div.topics {:tw "space-y-2 pb-4"}
-       (let [->topic @id->topic]
-         (for [topic (->> @sorted-topic-ids
-                          (map ->topic)
-                          (remove :topic/burn))]
-           ^{:key (:topic/id topic)}
-           [topic-view
-            {:*group *group
-             :*user *user}
-            topic]))]]]))
+    initialized? (atom false)
+    _ (r/track!
+       (fn []
+         (let [topics (-> @*group :topic/_group)]
+           (when (seq topics)
+             (if @initialized?
+               (resort-topics-debounced! topics)
+               (do
+                 (reset! initialized? true)
+                 (resort-topics! topics)))))))]
+   [group/page
+    {:*group *group}
+    [:<>
+     [:div {:tw "flex justify-between items-baseline"}
+      (if-let [description (-> @*group :group/description)]
+        [:div.description
+         {:tw "prose text-sm"
+          :dangerouslySetInnerHTML
+          (r/unsafe-html (md/md->html description))}]
+        [:div.spacer {:tw "h-4"}])
+      (when (or (-> @*group :group/membership :membership/admin?)
+                (and (-> @*group :group/open-topics?)
+                     (-> @*group :group/membership)))
+        [:div {:tw "text-xs"}
+         [ui/button {:on-click (fn []
+                                 (modal/open! [new-topic-modal-view *group]))}
+          [fa/fa-plus-circle-solid {:tw "w-3 h-3"}]
+          "Add a Topic"]])]
+     (when (state/error *group)
+       "This group does not exist, or you do not have access to it.")
+     [:div.topics {:tw "space-y-2 pb-4"}
+      (let [->topic @id->topic]
+        (for [topic (->> @sorted-topic-ids
+                         (map ->topic)
+                         (remove :topic/burn))]
+          ^{:key (:topic/id topic)}
+          [topic-view
+           {:*group *group
+            :*user *user}
+           topic]))]]]))
 
 (pages/register-page!
  {:page/id :page/group
