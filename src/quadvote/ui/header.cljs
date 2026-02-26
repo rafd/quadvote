@@ -41,10 +41,9 @@
       [:span {:tw "text-xs"} name])
     [ui/icon-button {:on-click (fn []
                                  (when (js/confirm "Log out?")
-                                   (state/ajax!
-                                    {:uri "/api/auth"
-                                     :method :delete
-                                     :on-success (fn [_]
-                                                   (js/window.location.reload))
-                                     :on-error (fn [])})))}
+                                   (-> (state/ajax!
+                                        {:uri "/api/auth"
+                                         :method :delete})
+                                       (.then (fn []
+                                                (js/window.location.reload))))))}
      [fa/fa-sign-out-alt-solid {:tw "w-3 h-3"}]]]])
