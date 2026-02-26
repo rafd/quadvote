@@ -18,9 +18,15 @@
         user-id
         (config/get :omni-secret))))
 
+(defonce rpc-handler (delay
+                       (tada.rpc/make-handler
+                        (cqrs/registry)
+                        {:extra-params
+                         (fn [request]
+                           {:user-id (get-in request [:session :user-id])})})))
+
 ;; if you change these, you have to reload omni
-(defn r
-  [cqrs-registry]
+(def r
   [[[:post "/api/auth"]
     (fn [request]
       (let [email (-> (get-in request [:body-params :email])
@@ -52,20 +58,15 @@
        :session nil})]
 
    [[:post "/api/tada/*"]
-    (tada.rpc/make-handler
-     cqrs-registry
-     ;; sys doesn't make context available via sys/get until after the system has fully started
-     #_(cqrs/registry)
-     {:extra-params
-      (fn [request]
-        {:user-id (get-in request [:session :user-id])})})]])
+    (fn [request]
+      (@rpc-handler request))]])
 
 (def component
   {:sys.component/id :routes
    :sys.component/expects #{:tada}
    :sys.component/provides #{:routes}
-   :sys.component/start (fn [{:keys [tada]}]
-                          {:routes (r tada)})})
+   :sys.component/start (fn [{:keys [_tada]}]
+                          {:routes #'r})})
 
 (defn routes []
   (sys/get :system :routes))

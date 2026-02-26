@@ -2,4 +2,8 @@
 
 ;; this is only to satisfy omni during uberjaring
 (def omni-config
-  {:omni/environment :prod})
+  {:omni/environment :prod
+   :omni/cljs {:main "quadvote.core"}
+   :omni/css
+   {:tailwind? true
+    :tailwind-opts {:base-css-rules '[girouette.tw.preflight/preflight-v2_0_3]}}})
