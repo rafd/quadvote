@@ -9,6 +9,7 @@
    [reagent.core :as r]
    [quadvote.model :as model]
    [quadvote.ui.common :as ui]
+   [quadvote.ui.gem-animation :as gem-animation]
    [quadvote.ui.group-common :as group]
    [quadvote.ui.modal :as modal]
    [quadvote.ui.state :as state]))
@@ -134,7 +135,13 @@
                 [:span {:title (str "Increasing your vote by 1 costs you " token-count " tokens")}
                  [ui/token-amount-view token-count :cost]])]
              [:button {:tw "px-1 flex gap-1"
-                       :on-click (fn [_]
+                       :on-click (fn [e]
+                                   (gem-animation/trigger!
+                                    {:from-el (.querySelector js/document ".my-balance")
+                                     :to-el (.-currentTarget e)
+                                     :gem-count (model/token-cost
+                                                 (:vote/voice-amount vote)
+                                                 (inc (:vote/voice-amount vote)))})
                                    (vote! {:topic-id (:topic/id topic)
                                            :new-voice-amount (inc (:vote/voice-amount vote))}))}
               [fa/fa-caret-up-solid {:tw "w-4 h-4"}]]]
@@ -159,7 +166,13 @@
                [:div {:title (str "Reducing your vote by 1 refunds you " token-count " tokens")}
                 [ui/token-amount-view token-count :refund]])
              [:button {:tw "px-1 flex gap-1"
-                       :on-click (fn [_]
+                       :on-click (fn [e]
+                                   (gem-animation/trigger!
+                                    {:from-el (.-currentTarget e)
+                                     :to-el (.querySelector js/document ".my-balance")
+                                     :gem-count (- (model/token-cost
+                                                    (:vote/voice-amount vote)
+                                                    (dec (:vote/voice-amount vote))))})
                                    (vote! {:topic-id (:topic/id topic)
                                            :new-voice-amount (dec (:vote/voice-amount vote))}))}
               [fa/fa-caret-down-solid {:tw "w-4 h-4"}]]]
@@ -213,36 +226,36 @@
                 (do
                   (reset! initialized? true)
                   (resort-topics! topics)))))))]
-   [group/page
-    {:*group *group}
-    [:<>
-     [:div {:tw "flex justify-between items-baseline"}
-      (if-let [description (-> @*group :group/description)]
-        [:div.description
-         {:tw "prose text-sm"
-          :dangerouslySetInnerHTML
-          (r/unsafe-html (md/md->html description))}]
-        [:div.spacer {:tw "h-4"}])
-      (when (or (-> @*group :group/membership :membership/admin?)
-                (and (-> @*group :group/open-topics?)
-                     (-> @*group :group/membership)))
-        [:div {:tw "text-xs"}
-         [ui/button {:on-click (fn []
-                                 (modal/open! [new-topic-modal-view *group]))}
-          [fa/fa-plus-circle-solid {:tw "w-3 h-3"}]
-          "Add a Topic"]])]
-     (when (state/error *group)
-       "This group does not exist, or you do not have access to it.")
-     [:div.topics {:tw "space-y-2 pb-4"}
-      (let [->topic @id->topic]
-        (for [topic (->> @sorted-topic-ids
-                         (map ->topic)
-                         (remove :topic/burn))]
-          ^{:key (:topic/id topic)}
-          [topic-view
-           {:*group *group
-            :*user *user}
-           topic]))]]]))
+    [group/page
+     {:*group *group}
+     [:<>
+      [:div {:tw "flex justify-between items-baseline"}
+       (if-let [description (-> @*group :group/description)]
+         [:div.description
+          {:tw "prose text-sm"
+           :dangerouslySetInnerHTML
+           (r/unsafe-html (md/md->html description))}]
+         [:div.spacer {:tw "h-4"}])
+       (when (or (-> @*group :group/membership :membership/admin?)
+                 (and (-> @*group :group/open-topics?)
+                      (-> @*group :group/membership)))
+         [:div {:tw "text-xs"}
+          [ui/button {:on-click (fn []
+                                  (modal/open! [new-topic-modal-view *group]))}
+           [fa/fa-plus-circle-solid {:tw "w-3 h-3"}]
+           "Add a Topic"]])]
+      (when (state/error *group)
+        "This group does not exist, or you do not have access to it.")
+      [:div.topics {:tw "space-y-2 pb-4"}
+       (let [->topic @id->topic]
+         (for [topic (->> @sorted-topic-ids
+                          (map ->topic)
+                          (remove :topic/burn))]
+           ^{:key (:topic/id topic)}
+           [topic-view
+            {:*group *group
+             :*user *user}
+            topic]))]]]))
 
 (pages/register-page!
  {:page/id :page/group

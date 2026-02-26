@@ -3,6 +3,7 @@
    [bloom.commons.pages :as pages]
    [reagent.core :as r]
    [quadvote.ui.common :as ui]
+   [quadvote.ui.gem-animation :as gem-animation]
    [quadvote.ui.state :as state]))
 
 (defn group-switcher-view
@@ -58,7 +59,11 @@
         [:div {:tw "pointer-events-auto bg-gray-300 border border-gray-400 rounded px-3 py-1.5 flex items-center gap-2 mb-2"}
          [:span {:tw "text-xs"}
           "Claim your bonus tokens → "]
-         [:button {:on-click (fn []
+         [:button {:on-click (fn [e]
+                               (gem-animation/trigger!
+                                {:from-el (.-currentTarget e)
+                                 :to-el (.querySelector js/document ".my-balance")
+                                 :gem-count amount})
                                (-> (state/tada!
                                     [:api/claim!
                                      {:membership-id (-> @*group :group/membership :membership/id)}])
@@ -101,8 +106,7 @@
 
      ;; claimable grant
 
-
-     ;; token balance
+;; token balance
      (when (-> @*group :group/membership)
        [:div.my-balance {:tw "flex items-center gap-1 -mb-1 self-end"}
         [ui/token-amount-view (-> @*group :group/membership :membership/balance) nil]])]]])
