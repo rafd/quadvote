@@ -46,7 +46,7 @@
                                             :group/name "Discover other groups..."}
                                            {:group/id "create"
                                             :group/name "Create your own group..."})]
-         ^{:key id}
+         ^{:key (or id "?")}
          [:option {:value (str id)} name])])))
 
 (defn header-view
@@ -69,18 +69,20 @@
 
     ;; sub-pages
     [:div {:tw "flex gap-2"}
-     (for [[label path] (->> [(when @*group
-                                ["Vote" [:page/group {:id (:group/id @*group)}]])
-                              (when @*group
-                                ["Log" [:page/log {:id (:group/id @*group)}]])
-                              (when (-> @*group :group/membership :membership/admin?)
-                                ["Admin" [:page/admin {:id (:group/id @*group)}]])]
-                             (remove nil?))]
-       [:a {:href (pages/path-for path)
-            :tw ["px-3 pb-1 pt-1.5 rounded-t border-t border-x border-gray-400 -mb-4"
-                 (when (pages/active? path)
-                   "bg-#edeef3")]}
-        label])]
+     (doall
+      (for [[label path] (->> [(when @*group
+                                 ["Vote" [:page/group {:id (:group/id @*group)}]])
+                               (when @*group
+                                 ["Log" [:page/log {:id (:group/id @*group)}]])
+                               (when (-> @*group :group/membership :membership/admin?)
+                                 ["Admin" [:page/admin {:id (:group/id @*group)}]])]
+                              (remove nil?))]
+        ^{:key label}
+        [:a {:href (pages/path-for path)
+             :tw ["px-3 pb-1 pt-1.5 rounded-t border-t border-x border-gray-400 -mb-4"
+                  (when (pages/active? path)
+                    "bg-#edeef3")]}
+         label]))]
 
     ;; claimable grant
     (let [amount (-> @*group :group/membership :membership/claimable-token-amount)]
