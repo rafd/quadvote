@@ -7,10 +7,10 @@
 
 (defn info-modal-view []
   [:div {:tw "prose"}
-   [:p "Vote on which projects Raf should spend more time on."]
+   [:p {:style {:margin-top 0}} "QuadVote lets groups vote on topics over time. For example, 'What should we watch on movie night?'"]
    [:p]
-   [:p "You have tokens to spend across projects."]
-   [:p "You can vote multiple times per project, but concentrating votes is more expensive:"]
+   [:p "As a member, you have tokens to spend across topics."]
+   [:p "You can vote multiple times per topic, but concentrating votes is more expensive:"]
    [:table
     [:tbody
      [:tr [:th "Tokens =>"] [:th "Votes"]]
@@ -20,8 +20,9 @@
      [:tr [:td "16"] [:td "4"]]
      [:tr [:td "25"] [:td "5"]]]]
    [:p "You can adjust your votes any time."]
-   [:p "When Raf spends a day on a project, tokens spent on that project will be consumed."]
-   [:p "New tokens can be claimed by logging in once a month."]
+   [:p "Group admins occasionally 'complete' a topic (ex. when a movie is watched), consuming tokens spent on that topic."]
+   [:p "New tokens can be claimed by logging in once a day/week/month (depending on the group)."]
+
    [:p "(This is an experiment in applied " [:a {:tw "underline decoration-from-font"
                                                  :target "_blank"
                                                  :href "https://en.wikipedia.org/wiki/Quadratic_voting"} "quadratic voting"] ")"]])
