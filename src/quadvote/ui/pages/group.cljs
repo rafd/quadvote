@@ -233,7 +233,7 @@
           "Add a Topic"]])]
      (when (state/error *group)
        "This group does not exist, or you do not have access to it.")
-     [:div.topics {:tw "space-y-2"}
+     [:div.topics {:tw "space-y-2 pb-4"}
       (let [->topic @id->topic]
         (for [topic (->> @sorted-topic-ids
                          (map ->topic)

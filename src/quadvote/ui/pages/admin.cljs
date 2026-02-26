@@ -110,7 +110,7 @@
    [*group (state/tada-atom! [:api/group {:group-id group-id}])]
    [group/page
     {:*group *group}
-    [:div {:tw "space-y-8"}
+    [:div {:tw "space-y-8 py-4"}
      (when @*group
        [:<>
         #_[invite-form-view {:*group *group}]

@@ -51,55 +51,58 @@
 
 (defn header-view
   [{:keys [*group]}]
-  [:div.header {:tw "bg-#e0e1e9 border-b border-gray-400"}
-   [:div.content {:tw "max-w-40rem mx-auto flex justify-between items-center gap-3 px-4 py-2"}
-    [group-switcher-view *group]
-    (when (and (nil? (-> @*group :group/membership))
-               (-> @*group :group/open-membership?))
-      [ui/button {:on-click (fn []
-                              (state/require-auth
-                               (fn []
-                                 (-> (state/tada! [:api/join-group!
-                                                   {:group-id (:group/id @*group)}])
-                                     (.then (fn []
-                                              (state/refresh! *group)))))))}
-       [:span {:tw "text-xs"} "Join Group"]])
+  [:<>
+   (let [amount (-> @*group :group/membership :membership/claimable-token-amount)]
+     (when (< 0 (or amount 0))
+       [:div {:tw "fixed bottom-0 left-0 right-0 flex items-center justify-center pointer-events-none"}
+        [:div {:tw "pointer-events-auto bg-gray-300 border border-gray-400 rounded px-3 py-1.5 flex items-center gap-2 mb-2"}
+         [:span {:tw "text-xs"}
+          "Claim your bonus tokens → "]
+         [:button {:on-click (fn []
+                               (-> (state/tada!
+                                    [:api/claim!
+                                     {:membership-id (-> @*group :group/membership :membership/id)}])
+                                   (.then (fn [_]
+                                            (state/refresh! *group)))))}
+          [ui/token-amount-view amount :gain]]]]))
+   [:div.header {:tw "sticky top-2em bg-#e0e1e9 border-b border-gray-400"}
+    [:div.content {:tw "max-w-40rem mx-auto flex flex-wrap justify-between items-center gap-3 px-2 desktop:px-4 py-2"}
+     [group-switcher-view *group]
+     (when (and (nil? (-> @*group :group/membership))
+                (-> @*group :group/open-membership?))
+       [ui/button {:on-click (fn []
+                               (state/require-auth
+                                (fn []
+                                  (-> (state/tada! [:api/join-group!
+                                                    {:group-id (:group/id @*group)}])
+                                      (.then (fn []
+                                               (state/refresh! *group)))))))}
+        [:span {:tw "text-xs"} "Join Group"]])
 
-    [:div {:tw "grow"}]
+     [:div {:tw "grow"}]
 
-    ;; sub-pages
-    [:div {:tw "flex gap-2"}
-     (doall
-      (for [[label path] (->> [(when @*group
-                                 ["Vote" [:page/group {:id (:group/id @*group)}]])
-                               (when @*group
-                                 ["Log" [:page/log {:id (:group/id @*group)}]])
-                               (when (-> @*group :group/membership :membership/admin?)
-                                 ["Admin" [:page/admin {:id (:group/id @*group)}]])]
-                              (remove nil?))]
-        ^{:key label}
-        [:a {:href (pages/path-for path)
-             :tw ["px-3 pb-1 pt-1.5 rounded-t border-t border-x border-gray-400 -mb-4"
-                  (when (pages/active? path)
-                    "bg-#edeef3")]}
-         label]))]
+     ;; sub-pages
+     [:div {:tw "flex gap-2 self-end"}
+      (doall
+       (for [[label path] (->> [(when @*group
+                                  ["Vote" [:page/group {:id (:group/id @*group)}]])
+                                (when @*group
+                                  ["Log" [:page/log {:id (:group/id @*group)}]])
+                                (when (-> @*group :group/membership :membership/admin?)
+                                  ["Admin" [:page/admin {:id (:group/id @*group)}]])]
+                               (remove nil?))]
+         ^{:key label}
+         [:a {:href (pages/path-for path)
+              :style {:margin-bottom "calc(-0.5rem - 1px)"}
+              :tw ["px-3 pb-1 pt-1.5 rounded-t border-t border-x border-gray-400"
+                   (when (pages/active? path)
+                     "bg-#edeef3")]}
+          label]))]
 
-    ;; claimable grant
-    (let [amount (-> @*group :group/membership :membership/claimable-token-amount)]
-      (when (< 0 (or amount 0))
-        [:div {:tw "absolute bottom-0 left-0 right-0 flex items-center justify-center pointer-events-none"}
-         [:div {:tw "pointer-events-auto bg-black/10 rounded px-3 py-1.5 flex items-center gap-2 mb-2"}
-          [:span {:tw "text-xs"}
-           "Claim your new tokens → "]
-          [:button {:on-click (fn []
-                                (-> (state/tada!
-                                     [:api/claim!
-                                      {:membership-id (-> @*group :group/membership :membership/id)}])
-                                    (.then (fn [_]
-                                             (state/refresh! *group)))))}
-           [ui/token-amount-view amount :gain]]]]))
+     ;; claimable grant
 
-    ;; token balance
-    (when (-> @*group :group/membership)
-      [:div.my-balance {:tw "flex items-center gap-1 -mb-3"}
-       [ui/token-amount-view (-> @*group :group/membership :membership/balance) nil]])]])
+
+     ;; token balance
+     (when (-> @*group :group/membership)
+       [:div.my-balance {:tw "flex items-center gap-1 -mb-1 self-end"}
+        [ui/token-amount-view (-> @*group :group/membership :membership/balance) nil]])]]])
