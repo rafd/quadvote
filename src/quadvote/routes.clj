@@ -18,19 +18,22 @@
         user-id
         (config/get :omni-secret))))
 
+;; if you change these, you have to reload omni
 (defn r
   [cqrs-registry]
   [[[:post "/api/auth"]
     (fn [request]
       (let [email (-> (get-in request [:body-params :email])
                       string/trim
-                      string/lower-case)]
+                      string/lower-case)
+            ;; should validate more?
+            path (get-in request [:body-params :path])]
         (if-let [user-id (or (state/email->user-id email)
                              (do (state/create-user! email)
                                  (state/email->user-id email)))]
           (do
             (future
-              (let [link (wrap-login {:url "/"
+              (let [link (wrap-login {:url path
                                       :user-id user-id})]
                 (email/send!
                  {:to email

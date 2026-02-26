@@ -69,7 +69,7 @@
 (defn icon-button
   [opts & children]
   (into [:button (merge
-                  {:tw "p-1"}
+                  {:tw "p-1 flex items-center gap-1"}
                   opts)]
         children))
 

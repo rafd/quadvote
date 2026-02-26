@@ -28,12 +28,14 @@
                                  (= "discover" id)
                                  (pages/navigate-to! [:page/discover])
                                  (= "create" id)
-                                 (let [name (js/prompt "Name your group:")]
-                                   (when (seq name)
-                                     (-> (state/tada! [:api/create-group! {:name name}])
-                                         (.then (fn [result]
-                                                  (state/refresh! *user)
-                                                  (pages/navigate-to! [:page/group {:id (:group-id result)}]))))))
+                                 (state/require-auth
+                                  (fn []
+                                    (let [name (js/prompt "Name your group:")]
+                                      (when (seq name)
+                                        (-> (state/tada! [:api/create-group! {:name name}])
+                                            (.then (fn [result]
+                                                     (state/refresh! *user)
+                                                     (pages/navigate-to! [:page/group {:id (:group-id result)}]))))))))
                                  :else
                                  (let [selected-group (->> groups
                                                            (filter #(= (str (:group/id %)) id))
@@ -55,10 +57,12 @@
     (when (and (nil? (-> @*group :group/membership))
                (-> @*group :group/open-membership?))
       [ui/button {:on-click (fn []
-                              (-> (state/tada! [:api/join-group!
-                                                {:group-id (:group/id @*group)}])
-                                  (.then (fn []
-                                           (state/refresh! *group)))))}
+                              (state/require-auth
+                               (fn []
+                                 (-> (state/tada! [:api/join-group!
+                                                   {:group-id (:group/id @*group)}])
+                                     (.then (fn []
+                                              (state/refresh! *group)))))))}
        [:span {:tw "text-xs"} "Join Group"]])
 
     [:div {:tw "grow"}]

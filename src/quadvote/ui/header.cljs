@@ -36,14 +36,20 @@
                                  (modal/open! [info-modal-view]))}
      [fa/fa-question-circle-solid {:tw "w-3 h-3"}]]]
 
-   [:div {:tw "flex items-center gap-1"}
-    (when-let [name (:user/name @*user)]
-      [:span {:tw "text-xs"} name])
-    [ui/icon-button {:on-click (fn []
-                                 (when (js/confirm "Log out?")
-                                   (-> (state/ajax!
-                                        {:uri "/api/auth"
-                                         :method :delete})
-                                       (.then (fn []
-                                                (js/window.location.reload))))))}
-     [fa/fa-sign-out-alt-solid {:tw "w-3 h-3"}]]]])
+
+   (if @*user
+     [:div {:tw "flex items-center gap-1"}
+      [ui/icon-button {:on-click (fn []
+                                   (when (js/confirm "Log out?")
+                                     (-> (state/ajax!
+                                          {:uri "/api/auth"
+                                           :method :delete})
+                                         (.then (fn []
+                                                  (js/window.location.reload))))))}
+       [:span {:tw "text-xs"} (:user/name @*user)]
+       [fa/fa-sign-out-alt-solid {:tw "w-3 h-3"}]]]
+     [:div {:tw "flex items-center gap-1"}
+      [ui/icon-button {:on-click (fn []
+                                   (state/auth!))}
+       [:span {:tw "text-xs"} "Log In"]
+       [fa/fa-sign-in-alt-solid {:tw "w-3 h-3"}]]])])

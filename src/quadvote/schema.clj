@@ -6,6 +6,9 @@
   [:fn {:error/message {:en "must not be blank"}}
    #(not (clojure.string/blank? %))])
 
+(def Email
+  [:re #"^[^\s@]+@[^\s@]+\.[^\s@]+$"])
+
 (def schema
   {:entity/group
    {:group/id {:dat/type :db.type/uuid
@@ -29,7 +32,7 @@
     :user/name {:dat/type :db.type/string
                 :dat/spec NonBlankString}
     :user/email {:dat/type :db.type/string
-                 :dat/spec NonBlankString}}
+                 :dat/spec Email}}
 
    :entity/membership
    {:membership/id {:dat/type :db.type/uuid

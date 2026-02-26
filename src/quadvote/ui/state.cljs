@@ -1,5 +1,6 @@
 (ns quadvote.ui.state
   (:require
+   [clojure.string :as string]
    [bloom.commons.ajax :as ajax]
    [bloom.commons.uuid :as uuid]
    [reagent.core :as r]
@@ -64,6 +65,31 @@
 
 (defonce group-id (r/atom nil))
 
+; --
+
+(defn auth!
+  []
+  (let [email (js/prompt "Enter your email to receive a login link:")]
+    (if (and email
+             (re-matches #"^[^\s@]+@[^\s@]+\.[^\s@]+$" email))
+      (-> (ajax!
+           {:uri "/api/auth"
+            :method :post
+            :params {:email email
+                     :path js/window.location.pathname}})
+          (.then (fn []
+                   (js/alert "Email sent. Check your inbox.")))
+          (.catch (fn [e]
+                    (js/console.error "Auth error:" e)
+                    (js/alert "Something went wrong. Try again?"))))
+      (js/alert "Email address invalid. Please try again."))))
+
+(defn require-auth [f]
+  (if @(tada-atom! [:api/user {}])
+    (f)
+    (when (js/confirm "You need to be logged in to do that. Log in now?")
+      (auth!))))
+
 ; ---
 
 (defn topic->total-voice-amount
@@ -80,3 +106,4 @@
        (filter (fn [vote]
                  (= user-id (:user/id (:vote/user vote)))))
        first))
+

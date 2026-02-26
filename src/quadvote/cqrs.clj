@@ -11,6 +11,12 @@
   [#(state/entity-exists? key value)
    :invalid (str "Entity with " [key value] " does not exist.")])
 
+(defn entity-nil-or-exists?-condition
+  [key value]
+  [#(or (nil? value)
+        (state/entity-exists? key value))
+   :invalid (str "Entity with " [key value] " does not exist.")])
+
 (defn user-is-admin-of-group?-condition
   [user-id group-id]
   [#(state/user-is-admin-of-group? user-id group-id)
@@ -28,21 +34,22 @@
 
 (def queries
   [{:id :api/user
-    :params {:user-id :user/id}
+    :params {:user-id [:maybe :user/id]}
     :return
     (fn [{:keys [user-id]}]
-      (dat/q
-       '[:find (pull ?user [:user/id
-                            :user/name
-                            {:membership/_user
-                             [:membership/id
-                              {:membership/group [:group/id
-                                                  :group/name]}]}]) .
-         :in $ ?user-id
-         :where
-         [?user :user/id ?user-id]]
-       @(state/conn)
-       user-id))}
+      (when user-id
+        (dat/q
+         '[:find (pull ?user [:user/id
+                              :user/name
+                              {:membership/_user
+                               [:membership/id
+                                {:membership/group [:group/id
+                                                    :group/name]}]}]) .
+           :in $ ?user-id
+           :where
+           [?user :user/id ?user-id]]
+         @(state/conn)
+         user-id)))}
 
    {:id :api/public-groups
     :return
@@ -55,10 +62,10 @@
 
    {:id :api/group
     :params {:group-id :group/id
-             :user-id :user/id}
+             :user-id [:maybe :user/id]}
     :conditions
     (fn [{:keys [user-id group-id]}]
-      [(entity-exists?-condition :user/id user-id)
+      [(entity-nil-or-exists?-condition :user/id user-id)
        (entity-exists?-condition :group/id group-id)
        [#(or (state/eav [:group/id group-id] :group/open-membership?)
              (state/user-is-member-of-group? user-id group-id))
