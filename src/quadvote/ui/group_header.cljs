@@ -71,6 +71,10 @@
                                             (state/refresh! *group)))))}
           [ui/token-amount-view amount :gain]]]]))
    [:div.header {:tw "sticky top-2em bg-#e0e1e9 border-b border-gray-400"}
+    (when (and (nil? (-> @*group :group/membership))
+                (-> @*group :group/open-membership?))
+      [:div {:tw "bg-yellow-100 border-y border-yellow-400 text-yellow-800 text-center text-sm px-4 py-3"}
+       "You need to join this group before you can participate. Click the button below."])
     [:div.content {:tw "max-w-40rem mx-auto flex flex-wrap justify-between items-center gap-3 px-2 desktop:px-4 py-2"}
      [group-switcher-view *group]
      (when (and (nil? (-> @*group :group/membership))
