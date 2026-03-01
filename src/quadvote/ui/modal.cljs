@@ -14,7 +14,7 @@
 
 (defn modal-view []
   (when-let [view @state]
-    [:div.wrapper {:tw "absolute top-0 right-0 left-0 bottom-0 flex p-10 cursor-pointer items-center justify-center"
+    [:div.wrapper {:tw "fixed top-0 right-0 left-0 bottom-0 flex p-10 cursor-pointer items-center justify-center z-1000"
                    :style {:background-color "rgba(0,0,0,0.3)"}
                    :on-click (fn []
                                (close!))}
