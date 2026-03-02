@@ -126,9 +126,10 @@
      :user/name (first (string/split email #"@"))
      :user/email email}]))
 
-(defn grant-to-group!
+(defn to-grant
   [group-id to-grant-amount]
-  ;; race condition - querying seperate from transaction
+  ;; granting to everyone in a group,
+  ;; except those who still have an unused grant
   (let [ids-and-amounts (dat/q '[:find ?membership-id ?amount
                                  :in $ ?group-id
                                  :where
@@ -138,13 +139,20 @@
                                  [?m :membership/claimable-token-amount ?amount]]
                                @(conn)
                                group-id)]
-    (dat/transact!
-     (conn)
-     (->> ids-and-amounts
-          (map (fn [[membership-id amount]]
-                 {:membership/id membership-id
-                  :membership/claimable-token-amount (max amount to-grant-amount)}))))
-    nil))
+    (->> ids-and-amounts
+         (map (fn [[membership-id amount]]
+                {:membership/id membership-id
+                 :membership/claimable-token-amount
+                 ;; increase their unused grant if it is smaller
+                 (max amount to-grant-amount)})))))
+
+(defn grant-to-group!
+  [group-id to-grant-amount]
+  ;; race condition - querying seperate from transaction
+  (dat/transact!
+   (conn)
+   (to-grant group-id to-grant-amount))
+  nil)
 
 (defn grant-to-membership!
   [membership-id group-id]
