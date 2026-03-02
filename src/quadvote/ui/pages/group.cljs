@@ -125,7 +125,8 @@
 
          [:div.voting {:tw "flex flex-col items-center min-w-6"}
          ;; increase-vote
-          (if can-upvote?
+          (cond
+            can-upvote?
             [ui/popover
              {:position :right}
              [:div
@@ -145,6 +146,12 @@
                                    (vote! {:topic-id (:topic/id topic)
                                            :new-voice-amount (inc (:vote/voice-amount vote))}))}
               [fa/fa-caret-up-solid {:tw "w-4 h-4"}]]]
+            (nil? (-> @*group :group/membership))
+            [:button {:tw "px-1 flex gap-1"
+                      :on-click (fn []
+                                  (js/alert "You need to join the group to vote on topics."))}
+             [fa/fa-caret-up-solid {:tw "w-4 h-4 opacity-30"}]]
+            :else
             [:div {:tw "px-1 w-4 h-4"}])
 
          ;; our voice
