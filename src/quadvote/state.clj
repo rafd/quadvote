@@ -141,6 +141,9 @@
                                @(conn)
                                group-id)]
     (->> ids-and-amounts
+         ;; ignore memberships that have unused grants
+         ;; (greater-or-equal-to the to-grant-amount)
+         (remove (fn [[_ amount]] (<= to-grant-amount amount)))
          (map (fn [[membership-id amount]]
                 {:membership/id membership-id
                  :membership/claimable-token-amount
