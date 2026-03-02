@@ -8,44 +8,6 @@
    [quadvote.ui.group-common :as group]
    [quadvote.ui.state :as state]))
 
-#_(defn invite-form-view
-  [{:keys [membership]}]
-  (r/with-let [status (r/atom nil)]
-    [:form
-     {:tw "space-y-2"
-      :on-submit (fn [e]
-                   (.preventDefault e)
-                   (reset! status ::loading)
-                   (-> (state/tada!
-                        [:api/add-user-to-group!
-                         {:name (-> e .-target .-elements (o/get "name") .-value)
-                          :email (-> e .-target .-elements (o/get "email") .-value)
-                          :group-id (get-in @membership [:membership/group :group/id])}])
-                       (.then (fn []
-                                (reset! status ::done)
-                                (.reset (.-target e))))
-                       (.catch (fn []
-                                 (reset! status ::error)))))}
-     [:h2 {:tw "font-bold"} "Invite User"]
-     [:label {:tw "block"}
-      [:div "Name"]
-      [:input {:type "text"
-               :name "name"
-               :tw ui/input-tw
-               :required true}]]
-     [:label {:tw "block"}
-      [:div "Email"]
-      [:input {:type "email"
-               :name "email"
-               :tw ui/input-tw
-               :required true}]]
-     [ui/button {} "Invite"]
-     (case @status
-       ::loading "..."
-       ::done "Invited!"
-       ::error "Something went wrong."
-       nil)]))
-
 (defn settings-form-view
   [{:keys [*group]}]
   (r/with-let
@@ -112,7 +74,7 @@
     {:*group *group}
     [:div {:tw "space-y-8 py-4"}
      (when @*group
-       [:<>
+        [settings-form-view {:*group *group}])]]))
         #_[invite-form-view {:*group *group}]
         [settings-form-view {:*group *group}]])]]))
 
