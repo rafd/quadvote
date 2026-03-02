@@ -1,5 +1,6 @@
 (ns quadvote.jobs
   (:require
+   [taoensso.telemere :as tel]
    [chime.core :as chime]
    [dat.api :as dat]
    [quadvote.state :as state])
@@ -29,8 +30,16 @@
 
 (defn grant-to-eligible-groups!
   [zdt]
-  (doseq [[group-id _ amount] (to-grant zdt)]
+  (doseq [[group-id _ amount] (tel/trace! ::groups-to-grant (to-grant zdt))]
     (state/grant-to-group! group-id amount)))
+
+(defn exec!
+  [zdt]
+  (tel/trace! {:msg "Running grant job..."
+               :data {:timestamp zdt}}
+              (grant-to-eligible-groups! zdt)))
+
+#_(exec! (ZonedDateTime/parse "2026-03-02T00:00:00-05:00[America/Toronto]"))
 
 (defn start-grant-job! []
   (chime/chime-at
@@ -38,9 +47,7 @@
          (.adjustInto (LocalTime/of 0 0)
                       (ZonedDateTime/now (ZoneId/of "America/Toronto")))
          (Period/ofDays 1)))
-   (fn [zdt]
-     (println "Running grant job...")
-     (grant-to-eligible-groups! zdt))))
+   exec!))
 
 #_(start-grant-job!)
 

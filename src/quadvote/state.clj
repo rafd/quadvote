@@ -1,6 +1,7 @@
 (ns quadvote.state
   (:require
    [clojure.string :as string]
+   [taoensso.telemere :as tel]
    [dat.api :as dat]
    [sys.api :as sys]
    [quadvote.model :as model]
@@ -151,7 +152,7 @@
   ;; race condition - querying seperate from transaction
   (dat/transact!
    (conn)
-   (to-grant group-id to-grant-amount))
+   (tel/trace! ::members-to-grant (to-grant group-id to-grant-amount)))
   nil)
 
 (defn grant-to-membership!

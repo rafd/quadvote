@@ -7,6 +7,8 @@
 
                  ;; [com.hyperfiddle/rcf "20220926-202227"] from commons
 
+                 [com.taoensso/telemere "1.2.1"]
+
                  [com.draines/postal "2.0.3"]
                  [datascript "1.7.8"]
                  [markdown-clj "1.11.4"]
