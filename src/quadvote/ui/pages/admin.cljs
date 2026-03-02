@@ -52,7 +52,7 @@
        :on-change #(swap! form assoc :open-topics? %)}]
      [form/radio-list
       {:legend "Grant Frequency"
-       :options [[:grant-frequency/never "Daily"]
+       :options [[:grant-frequency/never "Never"]
                  [:grant-frequency/daily "Daily"]
                  [:grant-frequency/weekly "Weekly"]
                  [:grant-frequency/monthly "Monthly"]]
