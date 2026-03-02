@@ -119,7 +119,32 @@
                         @(state/conn)
                         group-id
                         user-id)]
-        (assoc group :group/membership membership)))}])
+        (assoc group :group/membership membership)))}
+
+   {:id :api/admin-group-memberships
+    :params {:group-id :group/id
+             :user-id :user/id}
+    :conditions
+    (fn [{:keys [user-id group-id]}]
+      [(entity-exists?-condition :user/id user-id)
+       (entity-exists?-condition :group/id group-id)
+       (user-is-admin-of-group?-condition user-id group-id)])
+    :return
+    (fn [{:keys [group-id]}]
+      (dat/q
+       '[:find [(pull ?membership [:membership/id
+                                   :membership/admin?
+                                   :membership/balance
+                                   :membership/claimable-token-amount
+                                   {:membership/user [:user/id
+                                                      :user/name
+                                                      :user/email]}]) ...]
+         :in $ ?group-id
+         :where
+         [?group :group/id ?group-id]
+         [?membership :membership/group ?group]]
+       @(state/conn)
+       group-id))}])
 
 (def commands
   [{:id :api/vote!
