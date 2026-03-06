@@ -1,69 +1,38 @@
-(ns quadvote.migrate
-  (:require
-   [taoensso.nippy :as nippy]
-   [duratom.core :as d]
-   [quadvote.state :as state]
-   [dat.api :as dat]))
+(ns quadvote.migrate)
 
-(comment
-  (def state (d/duratom :local-file
-                        :file-path "state.nippy"
-                        :init {:db/topics {}
-                               :db/users {}
-                               :db/balances {}
-                               :db/votes {}}
-                        :rw {:read nippy/thaw-from-file
-                             :write nippy/freeze-to-file}))
+(require '[quadvote.state :as state])
+(require '[dat.api :as dat])
 
-  (deref state)
+(defn m2026-03-06-add-created-at-and-last-visit-at!
+  []
+  (let [today (java.util.Date.)]
+    (dat.api/transact!
+     (quadvote.state/conn)
+     (concat
+      (->> (dat.api/q '[:find ?topic-id
+                        :where
+                        [?t :topic/id ?topic-id]
+                        [(missing? $ ?t :topic/created-at)]]
+                      @(quadvote.state/conn))
+           (map (fn [[topic-id]]
+                  {:topic/id topic-id
+                   :topic/created-at today})))
+      (->> (dat.api/q '[:find ?membership-id
+                        :where
+                        [?m :membership/id ?membership-id]
+                        [(missing? $ ?m :membership/last-visit-at)]]
+                      @(quadvote.state/conn))
+           (map (fn [[membership-id]]
+                  {:membership/id membership-id
+                   :membership/last-visit-at today})))))))
 
-  (def group-id (dat/uuid))
-  (def raf-user-id (->> (vals (:db/users @state))
-                        (filter (fn [{:user/keys [email]}]
-                                  (= email "rafal.dittwald@gmail.com")))
-                        first
-                        :user/id))
-
-  (dat/transact!
-   state/conn
-   [{:user/id raf-user-id
-     :user/name "Raf"
-     :user/email "rafal.dittwald@gmail.com"}])
-
-  (dat/transact!
-   state/conn
-   [{:db/id -1
-     :group/id group-id
-     :group/name name}
-    {:membership/id (dat/uuid)
-     :membership/user [:user/id raf-user-id]
-     :membership/group -1
-     :membership/admin? true}])
-
-  (dat/transact!
-   state/conn
-   (concat (->> (vals (:db/topics @state))
-               (map (fn [{:topic/keys [id title description]}]
-                      {:topic/id id
-                       :topic/title title
-                       :topic/description description
-                       :topic/group [:group/id group-id]
-                       :topic/user [:user/id raf-user-id]})))
-
-          (->> (vals (:db/users @state))
-               (mapcat (fn [{:user/keys [id name email admin?]}]
-                         [{:user/id id
-                           :user/name name
-                           :user/email email}
-                          {:membership/id (dat/uuid)
-                           :membership/user [:user/id id]
-                           :membership/group [:group/id group-id]
-                           :membership/balance (get-in @state [:db/balances id] 0)
-                           :membership/admin? (boolean admin?)}])))
-
-          (->> (vals (:db/votes @state))
-               (map (fn [{:vote/keys [id topic-id user-id voice-amount]}]
-                      {:vote/id id
-                       :vote/voice-amount voice-amount
-                       :vote/topic [:topic/id topic-id]
-                       :vote/user [:user/id user-id]}))))))
+(defn m2026-01-30-add-new-token-fields!
+  []
+  (dat.api/transact!
+   (quadvote.state/conn)
+   (->> (dat.api/q '[:find ?membership-id
+                     :where [_ :membership/id ?membership-id]]
+                   @(quadvote.state/conn))
+        (map (fn [[membership-id]]
+               {:membership/id membership-id
+                :membership/claimable-token-amount 25})))))

@@ -95,6 +95,7 @@
                                            {:topic/user
                                             [:user/id
                                              :user/name]}
+                                           :topic/created-at
                                            {:vote/_topic
                                             [:vote/id
                                              :vote/voice-amount
@@ -109,7 +110,8 @@
                         '[:find (pull ?membership [:membership/id
                                                    :membership/admin?
                                                    :membership/balance
-                                                   :membership/claimable-token-amount]) .
+                                                   :membership/claimable-token-amount
+                                                   :membership/last-visit-at]) .
                           :in $ ?group-id ?user-id
                           :where
                           [?group :group/id ?group-id]
@@ -297,7 +299,8 @@
                        :topic/group [:group/id group-id]
                        :topic/user [:user/id user-id]
                        :topic/title title
-                       :topic/description description}]))}
+                       :topic/description description
+                       :topic/created-at (java.util.Date.)}]))}
 
    {:id :api/burn-topic!
     :params {:topic-id :topic/id
@@ -413,7 +416,30 @@
                                                 claimable-token-amount)}
                         {:claim/id (dat/uuid)
                          :claim/membership [:membership/id membership-id]
-                         :claim/timestamp (java.util.Date.)}])))}])
+                         :claim/timestamp (java.util.Date.)}])))}
+
+   {:id :api/record-visit!
+    :params {:membership-id :membership/id
+             :user-id :user/id}
+    :conditions
+    (fn [{:keys [membership-id user-id]}]
+      [(entity-exists?-condition :user/id user-id)
+       (entity-exists?-condition :membership/id membership-id)
+       [#(boolean (dat/q '[:find ?user-id .
+                           :in $ ?user-id ?membership-id
+                           :where
+                           [?u :user/id ?user-id]
+                           [?m :membership/id ?membership-id]
+                           [?m :membership/user ?u]]
+                         @(state/conn)
+                         user-id
+                         membership-id))
+        :forbidden "This membership does not belong to this user"]])
+    :effect
+    (fn [{:keys [membership-id]}]
+      (dat/transact! (state/conn)
+                     [{:membership/id membership-id
+                       :membership/last-visit-at (java.util.Date.)}]))}])
 
 (def component
   {:sys.component/id :tada

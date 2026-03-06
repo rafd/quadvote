@@ -9,7 +9,30 @@
    [quadvote.routes]
    [quadvote.state]))
 
+(defn set-all-last-visit-at-yesterday!
+  []
+  (let [yesterday (-> (java.time.Instant/now)
+                      (.atZone (java.time.ZoneId/systemDefault))
+                      (.minusDays 1)
+                      (.toInstant)
+                      (java.util.Date/from))
+        membership-ids (dat.api/q '[:find [?membership-id ...]
+                                    :where [_ :membership/id ?membership-id]]
+                                  @(quadvote.state/conn))]
+    (dat.api/transact!
+     (quadvote.state/conn)
+     (->> membership-ids
+          (map (fn [membership-id]
+                 {:membership/id membership-id
+                  :membership/last-visit-at yesterday}))))))
+
 (comment
+
+  ;; transact latest schema
+  (datascript.core/reset-schema!
+   (@quadvote.state/conn :dat.api/conn)
+   (dat.api/->db-schema :dat.db/datascript
+                        quadvote.state/schema))
 
   ;; create admin user
   (quadvote.state/create-user!

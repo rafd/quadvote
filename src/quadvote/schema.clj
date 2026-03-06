@@ -40,6 +40,7 @@
     :membership/balance {:dat/type :db.type/long}
     :membership/admin? {:dat/type :db.type/boolean}
     :membership/claimable-token-amount {:dat/type :db.type/long}
+    :membership/last-visit-at {:dat/type :db.type/instant}
     :membership/user {:dat/rel [:dat.rel/one
                                 :entity/user
                                 :user/id]}
@@ -62,6 +63,7 @@
     :topic/title {:dat/type :db.type/string
                   :dat/spec NonBlankString}
     :topic/description {:dat/type :db.type/string}
+    :topic/created-at {:dat/type :db.type/instant}
     :topic/group {:dat/rel [:dat.rel/one
                             :entity/group
                             :group/id]}

@@ -55,7 +55,7 @@
   [:<>
    (let [amount (-> @*group :group/membership :membership/claimable-token-amount)]
      (when (< 0 (or amount 0))
-       [:div {:tw "fixed bottom-0 left-0 right-0 flex items-center justify-center pointer-events-none"}
+       [:div {:tw "fixed bottom-0 left-0 right-0 flex items-center justify-center pointer-events-none z-1000"}
         [:div {:tw "pointer-events-auto bg-gray-300 border border-gray-400 rounded px-3 py-1.5 flex items-center gap-2 mb-2"}
          [:span {:tw "text-xs"}
           "Claim your bonus tokens → "]
@@ -70,7 +70,7 @@
                                    (.then (fn [_]
                                             (state/refresh! *group)))))}
           [ui/token-amount-view amount :gain]]]]))
-   [:div.header {:tw "sticky top-2em bg-#e0e1e9 border-b border-gray-400"}
+   [:div.header {:tw "sticky top-2em bg-#e0e1e9 border-b border-gray-400 z-100"}
     (when (and (nil? (-> @*group :group/membership))
                 (-> @*group :group/open-membership?))
       [:div {:tw "bg-yellow-100 border-y border-yellow-400 text-yellow-800 text-center text-sm px-4 py-3"}
