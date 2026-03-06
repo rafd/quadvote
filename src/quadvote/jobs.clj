@@ -34,10 +34,11 @@
     (state/grant-to-group! group-id amount)))
 
 (defn exec!
-  [zdt]
-  (tel/trace! {:msg "Running grant job..."
-               :data {:timestamp zdt}}
-              (grant-to-eligible-groups! zdt)))
+  [instant]
+  (let [zdt (.atZone instant (ZoneId/of "America/Toronto"))]
+    (tel/trace! {:msg "Running grant job..."
+                 :data {:timestamp zdt}}
+                (grant-to-eligible-groups! zdt))))
 
 #_(exec! (ZonedDateTime/parse "2026-03-02T00:00:00-05:00[America/Toronto]"))
 
