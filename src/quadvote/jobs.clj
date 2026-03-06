@@ -47,10 +47,10 @@
    (->> (chime/periodic-seq
          (.adjustInto (LocalTime/of 0 0)
                       (ZonedDateTime/now (ZoneId/of "America/Toronto")))
-         (Period/ofDays 1)))
+         (Period/ofDays 1))
+        rest ;; skip 'today'
+        )
    exec!))
-
-#_(start-grant-job!)
 
 (def component
   {:sys.component/id :jobs
