@@ -14,34 +14,47 @@
    [quadvote.ui.modal :as modal]
    [quadvote.ui.state :as state]))
 
-(defn new-topic-modal-view
-  [*group]
-  [:form {:tw "space-y-2"
-          :on-submit (fn [e]
-                       (.preventDefault e)
-                       (-> (state/tada!
-                            [:api/create-topic!
-                             {:title (-> e .-target .-elements (o/get "title") .-value)
-                              :description (-> e .-target .-elements (o/get "description") .-value)
-                              :group-id @state/group-id}])
-                           (.then (fn []
-                                    (state/refresh! *group)
-                                    (modal/close!)))))}
-   [:h1 {:tw "font-bold"} "Add a Topic"]
-   [:label {:tw "block"}
-    [:div "Title"]
-    [:input {:type "text"
-             :name "title"
-             :tw ui/input-tw
-             :required true
-             :auto-focus true}]]
-   [:label {:tw "block"}
-    [:div "Description"]
-    [:textarea {:name "description"
-                :tw ui/input-tw
-                :required true}]]
-   [:div
-    [ui/button {} "Submit"]]])
+(defn topic-modal-view
+  [*group {:keys [topic]}]
+  (let [editing? (some? topic)]
+    [:form {:tw "space-y-2"
+            :on-submit (fn [e]
+                         (.preventDefault e)
+                         (let [title (-> e .-target .-elements (o/get "title") .-value)
+                               description (-> e .-target .-elements (o/get "description") .-value)]
+                           (-> (state/tada!
+                                (if editing?
+                                  [:api/edit-topic!
+                                   {:topic-id (:topic/id topic)
+                                    :title title
+                                    :description description}]
+                                  [:api/create-topic!
+                                   {:title title
+                                    :description description
+                                    :group-id @state/group-id}]))
+                               (.then (fn []
+                                        (state/refresh! *group)
+                                        (modal/close!))))))}
+     [:h1 {:tw "font-bold"}
+      (if editing?
+        "Edit Topic"
+        "Add a Topic")]
+     [:label {:tw "block"}
+      [:div "Title"]
+      [:input {:type "text"
+               :name "title"
+               :tw ui/input-tw
+               :required true
+               :auto-focus true
+               :default-value (:topic/title topic)}]]
+     [:label {:tw "block"}
+      [:div "Description"]
+      [:textarea {:name "description"
+                  :tw ui/input-tw
+                  :required true
+                  :default-value (:topic/description topic)}]]
+     [:div
+      [ui/button {} "Submit"]]]))
 
 (defn voting-controls-linear-view [vote]
   [:div.votes {:tw "flex flex-col space-y-3px min-w-3"}
@@ -199,17 +212,21 @@
             :dangerouslySetInnerHTML
             (r/unsafe-html (md/md->html
                             (:topic/description topic)))}]
-          [:div.actions {:tw "py-4"}
+          [:div.actions {:tw "py-4 space-y-1 flex flex-col"}
            (when (-> @*group :group/membership :membership/admin?)
-             [ui/button {:on-click (fn []
-                                     (let [message (js/prompt "Message:")]
-                                       (when-not (string/blank? message)
-                                         (-> (state/tada! [:api/burn-topic!
-                                                           {:topic-id (:topic/id topic)
-                                                            :message message}])
-                                             (.then (fn []
-                                                      (state/refresh! *group)))))))}
-              "Burn"])]])])))
+             [:<>
+              [ui/button {:on-click (fn []
+                                      (let [message (js/prompt "Message:")]
+                                        (when-not (string/blank? message)
+                                          (-> (state/tada! [:api/burn-topic!
+                                                            {:topic-id (:topic/id topic)
+                                                             :message message}])
+                                              (.then (fn []
+                                                       (state/refresh! *group)))))))}
+               "Burn"]
+              [ui/button {:on-click (fn []
+                                      (modal/open! [topic-modal-view *group {:topic topic}]))}
+               "Edit"]])]])])))
 
 (defn view
   [group-id]
@@ -266,7 +283,7 @@
                       (-> @*group :group/membership)))
          [:div {:tw "text-xs"}
           [ui/button {:on-click (fn []
-                                  (modal/open! [new-topic-modal-view *group]))}
+                                  (modal/open! [topic-modal-view *group {}]))}
            [fa/fa-plus-circle-solid {:tw "w-3 h-3"}]
            "Add a Topic"]])]
       (when (state/error *group)

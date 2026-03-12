@@ -32,6 +32,20 @@
   [#(state/topic-is-within-group? topic-id group-id)
    :forbidden "Topic is not within of this group."])
 
+(defn user-is-admin-of-topic-group?-condition
+  [user-id topic-id]
+  [(fn []
+     (let [group-id (dat/q '[:find ?group-id .
+                              :in $ ?topic-id
+                              :where
+                              [?t :topic/id ?topic-id]
+                              [?t :topic/group ?g]
+                              [?g :group/id ?group-id]]
+                            @(state/conn)
+                            topic-id)]
+       (state/user-is-admin-of-group? user-id group-id)))
+   :forbidden "User is not an admin of the group that owns this topic."])
+
 (def queries
   [{:id :api/user
     :params {:user-id [:maybe :user/id]}
@@ -302,6 +316,23 @@
                        :topic/description description
                        :topic/created-at (java.util.Date.)}]))}
 
+   {:id :api/edit-topic!
+    :params {:topic-id :topic/id
+             :title :topic/title
+             :description :topic/description
+             :user-id :user/id}
+    :conditions
+    (fn [{:keys [user-id topic-id]}]
+      [(entity-exists?-condition :user/id user-id)
+       (entity-exists?-condition :topic/id topic-id)
+       (user-is-admin-of-topic-group?-condition user-id topic-id)])
+    :effect
+    (fn [{:keys [topic-id title description]}]
+      (dat/transact! (state/conn)
+                     [{:topic/id topic-id
+                       :topic/title title
+                       :topic/description description}]))}
+
    {:id :api/burn-topic!
     :params {:topic-id :topic/id
              :message :burn/message
@@ -310,17 +341,7 @@
     (fn [{:keys [user-id topic-id]}]
       [(entity-exists?-condition :user/id user-id)
        (entity-exists?-condition :topic/id topic-id)
-       [(fn []
-          (let [group-id (dat/q '[:find ?group-id .
-                                  :in $ ?topic-id
-                                  :where
-                                  [?t :topic/id ?topic-id]
-                                  [?t :topic/group ?g]
-                                  [?g :group/id ?group-id]]
-                                @(state/conn)
-                                topic-id)]
-            (user-is-admin-of-group?-condition user-id group-id)))
-        :forbidden "User is not an admin of the group that owns this topic."]])
+       (user-is-admin-of-topic-group?-condition user-id topic-id)])
     :effect
     (fn [{:keys [user-id topic-id message]}]
       (dat/transact! (state/conn)
