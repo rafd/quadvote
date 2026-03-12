@@ -30,7 +30,7 @@
 
 (defn header-view
   [{:keys [*user]}]
-  [:div.header {:tw "sticky top-0 flex justify-between items-center gap-3 bg-#3a714f text-white p-1"}
+  [:div.header {:tw "sticky top-0 flex justify-between items-center gap-3 bg-#3a714f text-white p-1 z-1000"}
    [:div {:tw "flex items-center"}
     [:span {:tw "text-sm"} "QV"]
     [ui/icon-button {:on-click (fn []
