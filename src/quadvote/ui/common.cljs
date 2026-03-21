@@ -73,14 +73,18 @@
                   opts)]
         children))
 
+(defn user-circle
+  [user]
+  [:div {:tw "rounded-full text-white text-center text-xs w-5 h-5 leading-5 border border-white"
+         :title name
+         :style {:background (color (:user/id user))}}
+   (first (:user/name user))])
+
 (defn user-circles
   [users]
   [:div.users {:tw "flex -space-x-1.5"}
-   (for [{:user/keys [id name]} users]
-     ^{:key id}
-     [:div {:tw "rounded-full text-white text-center text-xs w-5 h-5 leading-5 border border-white"
-            :title name
-            :style {:background (color id)}}
-      (first name)])])
+   (for [user users]
+     ^{:key (:user/id user)}
+     [user-circle user])])
 
 
