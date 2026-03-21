@@ -4,7 +4,7 @@
                  [io.bloomventures/omni "0.36.3"]
                  [io.bloomventures/commons "0.17.1"]
                  [com.github.rafd/sys "0.3.2"]
-                 [com.github.rafd/dat "0.0.1-20260306-0"]
+                 [com.github.rafd/dat "0.0.1-20260321-0"]
 
                  ;; [com.hyperfiddle/rcf "20220926-202227"] from commons
 
