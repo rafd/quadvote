@@ -24,9 +24,7 @@
                    [[:link
                      {:rel "stylesheet"
                       :href "/css/markdown.css"}]]
-                   :omni/css
-                   {:tailwind? true
-                    :tailwind-opts {:base-css-rules '[girouette.tw.preflight/preflight-v2_0_3]}}})
+                   :omni/css {:tailwind? true}})
      {})
    :sys.component/stop (fn [_]
                          (omni/stop!))})
