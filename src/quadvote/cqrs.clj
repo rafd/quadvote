@@ -46,6 +46,16 @@
        (state/user-is-admin-of-group? user-id group-id)))
    :forbidden "User is not an admin of the group that owns this topic."])
 
+(defn new-membership
+  [{:keys [membership-id user group admin?]}]
+  (cond-> {:membership/id membership-id
+           :membership/user user
+           :membership/balance 0
+           :membership/claimable-token-amount 0
+           :membership/last-visit-at (java.util.Date.)
+           :membership/group group}
+    admin? (assoc :membership/admin? true)))
+
 (def queries
   [{:id :api/user
     :params {:user-id [:maybe :user/id]}
@@ -247,13 +257,10 @@
            :group/grant-frequency :grant-frequency/monthly
            :group/open-membership? false
            :group/open-topics? false}
-          {:membership/id membership-id
-           :membership/user [:user/id user-id]
-           :membership/balance 0
-           :membership/claimable-token-amount 0
-           :membership/last-visit-at (java.util.Date.)
-           :membership/group -1
-           :membership/admin? true}])
+          (new-membership {:membership-id membership-id
+                           :user [:user/id user-id]
+                           :group -1
+                           :admin? true})])
         (state/grant-to-membership! membership-id group-id)
         {:group-id group-id}))
     :return :tada/effect-return}
@@ -278,22 +285,16 @@
       (let [membership-id (dat/uuid)]
         (dat/transact! (state/conn)
                        (if-let [user-id (state/email->user-id email)]
-                         [{:membership/id membership-id
-                           :membership/user [:user/id user-id]
-                           :membership/claimable-token-amount 0
-                           :membership/last-visit-at (java.util.Date.)
-                           :membership/balance 0
-                           :membership/group [:group/id group-id]}]
+                         [(new-membership {:membership-id membership-id
+                                          :user [:user/id user-id]
+                                          :group [:group/id group-id]})]
                          [{:db/id -1
                            :user/id (dat/uuid)
                            :user/name name
                            :user/email email}
-                          {:membership/id membership-id
-                           :membership/claimable-token-amount 0
-                           :membership/last-visit-at (java.util.Date.)
-                           :membership/balance 0
-                           :membership/user -1
-                           :membership/group [:group/id group-id]}]))
+                          (new-membership {:membership-id membership-id
+                                          :user -1
+                                          :group [:group/id group-id]})]))
         (state/grant-to-membership! membership-id group-id)))}
 
    {:id :api/create-topic!
@@ -397,12 +398,9 @@
     (fn [{:keys [user-id group-id]}]
       (let [membership-id (dat/uuid)]
         (dat/transact! (state/conn)
-                       [{:membership/id membership-id
-                         :membership/user [:user/id user-id]
-                         :membership/claimable-token-amount 0
-                         :membership/last-visit-at (java.util.Date.)
-                         :membership/balance 0
-                         :membership/group [:group/id group-id]}])
+                       [(new-membership {:membership-id membership-id
+                                        :user [:user/id user-id]
+                                        :group [:group/id group-id]})])
         (state/grant-to-membership! membership-id group-id)))}
 
    {:id :api/claim!
