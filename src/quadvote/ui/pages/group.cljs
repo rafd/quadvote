@@ -69,14 +69,16 @@
      vote! (fn [{:keys [topic-id new-voice-amount]}]
              (-> (state/tada! [:api/vote!
                                {:topic-id topic-id
-                                :voice-amount new-voice-amount}])
-                 (.then (fn []
-                          (state/refresh! *group)))))]
-    (let [new? (< (.getTime (-> @*group :group/membership :membership/last-visit-at))
-                  (.getTime (:topic/created-at topic)))]
-      [:div.topic {:tw ["relative"
-                        (if new?
-                          "bg-green-50 rounded shadow-green-300 shadow-md ring-1 ring-green-200"
+                               :voice-amount new-voice-amount}])
+                (.then (fn []
+                         (state/refresh! *group)))))]
+   (let [;; anon viewers don't have a last-visit-at
+         new? (when-let [last-visit-at (-> @*group :group/membership :membership/last-visit-at)]
+                (< last-visit-at
+                   (.getTime (:topic/created-at topic))))]
+     [:div.topic {:tw ["relative"
+                       (if new?
+                         "bg-green-50 rounded shadow-green-300 shadow-md ring-1 ring-green-200"
                           "bg-white rounded shadow")]}
        [:div.main {:tw "flex justify-between items-center"}
         [:div.title {:tw "p-4 flex flex-wrap justify-between grow gap-2 items-center cursor-pointer group"
@@ -261,13 +263,14 @@
                 (resort-topics-debounced! topics)
                 (do
                   (reset! initialized? true)
-                  (resort-topics! topics)))))))
-     _ (r/track!
-        (fn []
-          (when (and @*group @*user)
-            (state/tada! [:api/record-visit!
-                          {:membership-id (:membership/id (:group/membership @*group))
-                           :user-id (:user/id @*user)}]))))]
+                 (resort-topics! topics)))))))
+    _ (r/track!
+       (fn []
+         ;; user might not be part of group yet
+         (when (and @*group @*user (:group/membership @*group))
+           (state/tada! [:api/record-visit!
+                         {:membership-id (:membership/id (:group/membership @*group))
+                          :user-id (:user/id @*user)}]))))]
     [group/page
      {:*group *group}
      [:<>
