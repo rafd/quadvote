@@ -76,7 +76,7 @@
          new? (when-let [last-visit-at (-> @*group :group/membership :membership/last-visit-at)]
                 (< last-visit-at
                    (.getTime (:topic/created-at topic))))]
-     [:div.topic {:tw ["relative overflow-hidden"
+     [:div.topic {:tw ["relative"
                        (if new?
                          "bg-green-50 rounded shadow-green-300 shadow-md ring-1 ring-green-200"
                          "bg-white rounded shadow")]}
@@ -208,7 +208,7 @@
                [fa/fa-caret-down-solid {:tw "w-4 h-4"}]]]
              [:div {:tw "px-1 w-4 h-4"}])]])]
       (when @show-description?
-        [:div.extra {:tw "flex"}
+        [:div.extra {:tw "flex rounded-b overflow-hidden"}
          [:div {:tw "grow"}
           [:div.description
            {:tw "px-4 whitespace-pre-wrap text-xs prose border-y border-gray-300"
@@ -220,22 +220,22 @@
              [ui/user-circle user]
              [:span (:user/name user)]
              [:span "·"]
-             [:span (.toLocaleDateString (:topic/created-at topic))]])]
-         [:div.actions {:tw "py-4 space-y-1 flex flex-col"}
-          (when (-> @*group :group/membership :membership/admin?)
-            [:<>
-             [ui/button {:on-click (fn []
-                                     (let [message (js/prompt "Message:")]
-                                       (when-not (string/blank? message)
-                                         (-> (state/tada! [:api/burn-topic!
-                                                           {:topic-id (:topic/id topic)
-                                                            :message message}])
-                                             (.then (fn []
-                                                      (state/refresh! *group)))))))}
-              "Burn"]
-             [ui/button {:on-click (fn []
-                                     (modal/open! [topic-modal-view *group {:topic topic}]))}
-              "Edit"]])]])])))
+             [:span (.toLocaleDateString (:topic/created-at topic))]
+             [:div {:tw "grow"}]
+             (when (-> @*group :group/membership :membership/admin?)
+               [:<>
+                [ui/button {:on-click (fn []
+                                        (let [message (js/prompt "Message:")]
+                                          (when-not (string/blank? message)
+                                            (-> (state/tada! [:api/burn-topic!
+                                                              {:topic-id (:topic/id topic)
+                                                               :message message}])
+                                                (.then (fn []
+                                                         (state/refresh! *group)))))))}
+                 "Burn"]
+                [ui/button {:on-click (fn []
+                                        (modal/open! [topic-modal-view *group {:topic topic}]))}
+                 "Edit"]])])]])])))
 
 (defn view
   [group-id]
