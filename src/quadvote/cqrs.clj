@@ -46,15 +46,67 @@
        (state/user-is-admin-of-group? user-id group-id)))
    :forbidden "User is not an admin of the group that owns this topic."])
 
+(defn new-group
+  [{:keys [db-id group-id name]}]
+  (cond-> {:group/id group-id
+           :group/name name
+           :group/description ""
+           :group/grant-amount 25
+           :group/grant-frequency :grant-frequency/monthly
+           :group/open-membership? false
+           :group/open-topics? false}
+    db-id (assoc :db/id db-id)))
+
+(defn new-user
+  [{:keys [db-id name email]}]
+  (cond-> {:user/id (dat/uuid)
+           :user/name name
+           :user/email email}
+    db-id (assoc :db/id db-id)))
+
 (defn new-membership
-  [{:keys [membership-id user group admin?]}]
+  [{:keys [db-id membership-id user group admin?]}]
   (cond-> {:membership/id membership-id
            :membership/user user
            :membership/balance 0
            :membership/claimable-token-amount 0
            :membership/last-visit-at (java.util.Date.)
            :membership/group group}
-    admin? (assoc :membership/admin? true)))
+    admin? (assoc :membership/admin? true)
+    db-id (assoc :db/id db-id)))
+
+(defn new-topic
+  [{:keys [db-id group user title description]}]
+  (cond-> {:topic/id (dat/uuid)
+           :topic/group group
+           :topic/user user
+           :topic/title title
+           :topic/description description
+           :topic/created-at (java.util.Date.)}
+    db-id (assoc :db/id db-id)))
+
+(defn new-burn
+  [{:keys [db-id message user]}]
+  (cond-> {:burn/id (dat/uuid)
+           :burn/message message
+           :burn/user user
+           :burn/timestamp (java.util.Date.)}
+    db-id (assoc :db/id db-id)))
+
+(defn new-vote
+  [{:keys [db-id vote-id topic user voice-amount]}]
+  (cond-> {:vote/id (or vote-id (dat/uuid))
+           :vote/topic topic
+           :vote/user user
+           :vote/voice-amount voice-amount}
+    db-id (assoc :db/id db-id)))
+
+(defn new-claim
+  [{:keys [db-id membership]}]
+  (cond-> {:claim/id (dat/uuid)
+           :claim/membership membership
+           :claim/timestamp (java.util.Date.)}
+    db-id (assoc :db/id db-id)))
 
 (def queries
   [{:id :api/user
@@ -227,10 +279,10 @@
          (state/conn)
          [(if (= 0 voice-amount)
             [:db/retractEntity [:vote/id vote-id]]
-            {:vote/id (or vote-id (dat/uuid))
-             :vote/topic [:topic/id topic-id]
-             :vote/user [:user/id user-id]
-             :vote/voice-amount voice-amount})
+            (new-vote {:vote-id vote-id
+                       :topic [:topic/id topic-id]
+                       :user [:user/id user-id]
+                       :voice-amount voice-amount}))
           {:membership/id membership-id
            :membership/balance (let [delta (model/token-cost
                                             (or previous-amount 0)
@@ -249,14 +301,9 @@
             membership-id (dat/uuid)]
         (dat/transact!
          (state/conn)
-         [{:db/id -1
-           :group/id group-id
-           :group/name name
-           :group/description ""
-           :group/grant-amount 25
-           :group/grant-frequency :grant-frequency/monthly
-           :group/open-membership? false
-           :group/open-topics? false}
+         [(new-group {:db-id -1
+                      :group-id group-id
+                      :name name})
           (new-membership {:membership-id membership-id
                            :user [:user/id user-id]
                            :group -1
@@ -288,10 +335,9 @@
                          [(new-membership {:membership-id membership-id
                                           :user [:user/id user-id]
                                           :group [:group/id group-id]})]
-                         [{:db/id -1
-                           :user/id (dat/uuid)
-                           :user/name name
-                           :user/email email}
+                         [(new-user {:db-id -1
+                                     :name name
+                                     :email email})
                           (new-membership {:membership-id membership-id
                                           :user -1
                                           :group [:group/id group-id]})]))
@@ -313,12 +359,10 @@
     :effect
     (fn [{:keys [title description group-id user-id]}]
       (dat/transact! (state/conn)
-                     [{:topic/id (dat/uuid)
-                       :topic/group [:group/id group-id]
-                       :topic/user [:user/id user-id]
-                       :topic/title title
-                       :topic/description description
-                       :topic/created-at (java.util.Date.)}]))}
+                     [(new-topic {:group [:group/id group-id]
+                                  :user [:user/id user-id]
+                                  :title title
+                                  :description description})]))}
 
    {:id :api/edit-topic!
     :params {:topic-id :topic/id
@@ -350,10 +394,8 @@
     (fn [{:keys [user-id topic-id message]}]
       (dat/transact! (state/conn)
                      [{:topic/id topic-id
-                       :topic/burn {:burn/id (dat/uuid)
-                                    :burn/message message
-                                    :burn/user [:user/id user-id]
-                                    :burn/timestamp (java.util.Date.)}}]))}
+                       :topic/burn (new-burn {:message message
+                                              :user [:user/id user-id]})}]))}
 
    {:id :api/update-group!
     :params [:map
@@ -437,9 +479,7 @@
                          :membership/claimable-token-amount 0
                          :membership/balance (+ balance
                                                 claimable-token-amount)}
-                        {:claim/id (dat/uuid)
-                         :claim/membership [:membership/id membership-id]
-                         :claim/timestamp (java.util.Date.)}])))}
+                        (new-claim {:membership [:membership/id membership-id]})])))}
 
    {:id :api/record-visit!
     :params {:membership-id :membership/id
