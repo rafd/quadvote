@@ -251,6 +251,7 @@
            :membership/user [:user/id user-id]
            :membership/balance 0
            :membership/claimable-token-amount 0
+           :membership/last-visit-at (java.util.Date.)
            :membership/group -1
            :membership/admin? true}])
         (state/grant-to-membership! membership-id group-id)
@@ -280,6 +281,7 @@
                          [{:membership/id membership-id
                            :membership/user [:user/id user-id]
                            :membership/claimable-token-amount 0
+                           :membership/last-visit-at (java.util.Date.)
                            :membership/balance 0
                            :membership/group [:group/id group-id]}]
                          [{:db/id -1
@@ -288,6 +290,7 @@
                            :user/email email}
                           {:membership/id membership-id
                            :membership/claimable-token-amount 0
+                           :membership/last-visit-at (java.util.Date.)
                            :membership/balance 0
                            :membership/user -1
                            :membership/group [:group/id group-id]}]))
@@ -397,6 +400,7 @@
                        [{:membership/id membership-id
                          :membership/user [:user/id user-id]
                          :membership/claimable-token-amount 0
+                         :membership/last-visit-at (java.util.Date.)
                          :membership/balance 0
                          :membership/group [:group/id group-id]}])
         (state/grant-to-membership! membership-id group-id)))}
